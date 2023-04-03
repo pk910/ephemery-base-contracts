@@ -117,7 +117,7 @@ const readline = require("readline");
           callNonce,
           deploymentSteps[i].address,
           deploymentSteps[i].amount,
-          Buffer.from(deploymentSteps[i].data, "hex")
+          Buffer.from(deploymentSteps[i].data.replace(/^0x/, ""), "hex")
         ]);
         break;
       default:
@@ -139,6 +139,7 @@ const readline = require("readline");
     console.log("  signature: " + stepSig.serialized);
 
     deploymentSigs.push(stepSig.serialized);
+    callNonce++;
   }
 
   var sigYaml = yaml.stringify({
