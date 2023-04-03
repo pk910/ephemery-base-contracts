@@ -1,0 +1,17 @@
+{
+  "name": "contract-deployer",
+  "version": "0.0.1",
+  "description": "Contract Deployer",
+  "scripts": {
+    "parse-json": "node utils/parse-json.js",
+    "sign": "node utils/sign-project.js",
+    "start": "tsc && node dist/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "pk910 (https://pk910.de)",
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "ethers": "^6.2.3",
+    "yaml": "^2.1.1"
+  }
+}
