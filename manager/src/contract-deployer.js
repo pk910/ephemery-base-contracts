@@ -6,6 +6,7 @@ const commandLineUsage = require('command-line-usage');
 const yaml = require("yaml");
 const RLP = require('rlp');
 const Web3 = require('web3');
+const ethers = require("ethers");
 const EthTx = require('@ethereumjs/tx');
 const EthCom = require('@ethereumjs/common');
 const EthUtil = require('ethereumjs-util');
@@ -15,7 +16,7 @@ const deploymentManagerContract = require("../contract/DeploymentManager.json");
 
 const optionDefinitions = [
   { 
-    name: 'command',
+    name: 'project',
     defaultOption: true,
   },
   {
@@ -68,26 +69,12 @@ const optionDefinitions = [
     defaultValue: 1.2,
   },
 ];
-const projectOptionDefinitions = [
-  { 
-    name: 'project',
-    defaultOption: true,
-  },
-  {
-    name: 'manager',
-    description: 'Use DeploymentManager at this address',
-    alias: 'm',
-    type: String,
-    typeLabel: '{underline 0x...}',
-  },
-];
 
 const options = commandLineArgs(optionDefinitions, { stopAtFirstUnknown: true });
 
 var web3 = null;
 var web3Common = null;
 var wallet = null;
-var state = null;
 var deploymentManager = null;
 
 main();
@@ -111,21 +98,8 @@ async function main() {
     privkey: walletKey,
     addr: walletAddr,
   };
-  loadState();
-
-  switch((options['command'] || "").toLowerCase()) {
-    case "manager":
-      await deployManager();
-      break;
-    case "project":
-      await deployProject();
-      break;
-    default:
-      printHelp();
-      console.log("Unknown command: " + options['command']);
-      console.log("");
-      return;
-  }
+  
+  await deployProject();
 }
 
 function printHelp() {
@@ -149,28 +123,6 @@ function sleepPromise(timeout) {
 
 function weiToEth(wei) {
   return parseInt((wei / 1000000000000000n).toString()) / 1000;
-}
-
-function loadState() {
-  if(fs.existsSync(options['state'])) {
-    state = JSON.parse(fs.readFileSync(options['state']));
-  }
-  else {
-    resetState(0);
-  }
-}
-
-function resetState(chainId) {
-  state = {
-    chainId: chainId,
-    manager: null,
-    deployed: {},
-    exports: {}
-  };
-}
-
-function saveState() {
-  fs.writeFileSync(options['state'], JSON.stringify(state));
 }
 
 function loadPrivateKey() {
@@ -214,22 +166,14 @@ function initWeb3Chain(chainid) {
   });
 }
 
-function buildEthTx(to, amount, nonce) {
-  var rawTx = {
-    nonce: nonce,
-    gasLimit: options['gaslimit'],
-    maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
-    maxFeePerGas: options['maxfeepergas'] * 1000000000,
-    from: wallet.addr,
-    to: to,
-    value: "0x" + amount.toString(16)
-  };
-  var privateKey = Uint8Array.from(wallet.privkey);
-  var tx = EthTx.FeeMarketEIP1559Transaction.fromTxData(rawTx, { common: web3Common });
-  tx = tx.sign(privateKey);
+async function isContract(addr) {
+  let code = await web3.eth.getCode(addr);
+  return code && !!code.match(/^0x[0-9a-f]{2,}$/);
+}
 
-  var txRes = tx.serialize().toString('hex');
-  return txRes;
+async function getBalance(addr) {
+  let balance = await web3.eth.getBalance(addr);
+  return parseInt(balance);
 }
 
 async function publishTransaction(txhex) {
@@ -259,82 +203,118 @@ async function publishTransaction(txhex) {
   return [txHash, receiptPromise];
 }
 
-async function deployManager() {
-  await startWeb3();
-  initWeb3Chain(wallet.chainid);
-  if(state.chainId != wallet.chainid)
-    resetState();
-
-  var nonce = wallet.nonce;
-  var rawTx = {
-    nonce: nonce,
-    gasLimit: 2000000,
-    maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
-    maxFeePerGas: options['maxfeepergas'] * 1000000000,
-    from: wallet.addr,
-    to: null,
-    value: 0,
-    data: Buffer.from(deploymentManagerContract.bytecode, "hex"),
-  };
-  var privateKey = Uint8Array.from(wallet.privkey);
-  var tx = EthTx.FeeMarketEIP1559Transaction.fromTxData(rawTx, { common: web3Common });
-  tx = tx.sign(privateKey);
-  var txhex = tx.serialize().toString('hex');
-
-  var txres = await publishTransaction(txhex);
-  wallet.nonce++;
-  console.log("deploying DeplomentManager contract (tx: " + txres[0] + ")");
-
-  await txres[1];
-
-  var deployEnc = Buffer.from(RLP.encode([wallet.addr, nonce]));
-  var deployHash = web3.utils.sha3(deployEnc);
-  var deployAddr = web3.utils.toChecksumAddress("0x"+deployHash.substring(26));
-
-  console.log("deployed DeplomentManager: " + deployAddr);
-
-  state.manager = deployAddr;
-  saveState();
-
-  return deployAddr;
-}
-
 async function deployProject() {
   await startWeb3();
   initWeb3Chain(wallet.chainid);
-  if(state.chainId != wallet.chainid)
-    resetState();
 
-  const projectOpts = commandLineArgs(projectOptionDefinitions, { argv: options._unknown || [], stopAtFirstUnknown: true });
-  if(!projectOpts['project']) {
+  if(!options['project']) {
     console.log("missing project name.");
     return;
   }
 
-  // get deployment manager
-  if(projectOpts['manager'] && (!state.manager || projectOpts['manager'].toLowerCase() !== state.manager.toLowerCase())) {
-    state.manager = projectOpts['manager'];
-    saveState();
-  }
-  else if(!state.manager) {
-    console.log("DeplomentManager not deployed yet.");
-    return;
-  }
-  deploymentManager = new web3.eth.Contract(deploymentManagerContract.managerAbi, state.manager);
-  
   // load project
-  var projectPath = path.join(".", "projects", projectOpts['project']);
+  var projectPath = path.join(".", "projects", options['project']);
   if(!fs.existsSync(path.join(projectPath, "deployment.yaml"))) {
     console.log("could not find deployment.yaml in " + projectPath);
     return;
   }
+  var projectYaml = yaml.parse(fs.readFileSync(path.join(projectPath, "deployment.yaml"), "utf-8"));
+  var projectRefs = {};
+
+  // load & check dependencies
+  if(projectYaml.dependencies && Array.isArray(projectYaml.dependencies) && projectYaml.dependencies.length > 0) {
+    let allValid = true;
+    for(let i = 0; i < projectYaml.dependencies.length; i++) {
+      allValid = allValid && await checkProjectDependency(projectYaml.dependencies[i], projectRefs);
+    }
+    if(!allValid) {
+      console.log("one or more dependency checks failed!");
+      return;
+    }
+  }
+
+  switch(projectYaml.mode) {
+    case "unmanaged":
+    case "standalone":
+      await deployStandaloneProject(projectPath, projectYaml, projectRefs);
+      break;
+    case "managed":
+      await deployManagedProject(projectPath, projectYaml, projectRefs);
+      break;
+  }
+
+  console.log("");
+
+  if(!(await checkProjectDependency(options['project'], projectRefs))) {
+    console.log("Deployment completed, but dependency check still fails");
+    return;
+  }
+
+  console.log("Project references:");
+  console.log(yaml.stringify(projectRefs));
+
+}
+
+async function deployStandaloneProject(projectPath, projectYaml, projectRefs) {
+  // run deployment steps
+  if(!projectYaml.steps || !Array.isArray(projectYaml.steps) || projectYaml.steps.length == 0) {
+    console.log("no deployment steps for " + options['project']);
+    return;
+  }
+
+  var deploymentPromises = [];
+  for(let i = 0; i < projectYaml.steps.length; i++) {
+    let step = projectYaml.steps[i];
+    if(step.if && !(await checkProjectStepConditions(projectRefs, step.if))) {
+      console.log("deployment step " + (i+1) + " skipped: conditions not met");
+      continue;
+    }
+
+    let res;
+    switch(step.action) {
+      case "publish":
+        res = await runDeploymentPublishStep(projectYaml, i, step, projectRefs);
+        break;
+      case "call":
+        res = await runDeploymentCallStep(projectYaml, i, step, projectRefs);
+        break;
+    }
+    if(res) {
+      if(res[0])
+        console.log(" tx hash: " + res[0]);
+      deploymentPromises.push(res[1]);
+
+      if(step.await && res[1]) {
+        console.log(" awaiting confirmation...");
+        await res[1];
+      }
+    }
+  }
+
+  console.log("deployment completed, awaiting confirmations...");
+  await Promise.all(deploymentPromises);
+  console.log("all transactions confirmed!");
+}
+
+async function deployManagedProject(projectPath, projectYaml, projectRefs) {
   if(!fs.existsSync(path.join(projectPath, "signatures.yaml"))) {
     console.log("could not find signatures.yaml in " + projectPath);
     return;
   }
-  var projectYaml = yaml.parse(fs.readFileSync(path.join(projectPath, "deployment.yaml"), "utf-8"));
   var signaturesYaml = yaml.parse(fs.readFileSync(path.join(projectPath, "signatures.yaml"), "utf-8"));
-  var projectRefs = {};
+
+  if(!deploymentManager) {
+    if(!(await checkProjectDependency("_manager", projectRefs))) {
+      console.log("DeplomentManager not found. Please deploy '_manager' project first.");
+      return;
+    }
+    deploymentManager = new web3.eth.Contract(deploymentManagerContract.managerAbi, projectRefs["_manager.DeploymentManager"]);
+  }
+
+  if(!(signaturesYaml = signaturesYaml[projectRefs["_manager.DeploymentManager"].toLowerCase()])) {
+    console.log("could not find valid signatures to use with DeploymentManager at " + projectRefs["_manager.DeploymentManager"]);
+    return;
+  }
 
   // check if already deployed
   var skipSteps = 0;
@@ -343,11 +323,11 @@ async function deployProject() {
     var deployerContract = new web3.eth.Contract(deploymentManagerContract.accountAbi, deployerAddr);
     var deployerCallNonce = await deployerContract.methods["callNonce"]().call();
     if(deployerCallNonce >= projectYaml.steps.length) {
-      console.log("project " + projectOpts['project'] + " is already deployed!");
+      console.log("project " + options['project'] + " is already deployed!");
       return;
     }
     else if(deployerCallNonce > 0) {
-      console.log("project " + projectOpts['project'] + " is deployed incompletely... Trying to continue with step " + deployerCallNonce);
+      console.log("project " + options['project'] + " is deployed incompletely... Trying to continue with step " + deployerCallNonce);
       skipSteps = deployerCallNonce;
     }
   }
@@ -367,17 +347,22 @@ async function deployProject() {
 
   // run deployment steps
   if(!projectYaml.steps || !Array.isArray(projectYaml.steps) || projectYaml.steps.length == 0) {
-    console.log("no deployment steps for " + projectOpts['project']);
+    console.log("no deployment steps for " + options['project']);
     return;
   }
   if(!signaturesYaml.signatures || !Array.isArray(signaturesYaml.signatures) || signaturesYaml.signatures.length !== projectYaml.steps.length) {
-    console.log("number of signatures does not match number of steps for " + projectOpts['project']);
+    console.log("number of signatures does not match number of steps for " + options['project']);
     return;
   }
 
   var deploymentPromises = [];
   for(let i = skipSteps; i < projectYaml.steps.length; i++) {
     let step = projectYaml.steps[i];
+    // conditions not supported in managed mode as that breaks the callNonce restriction. Need to add a signed replacement transaction if this is really needed.
+    //if(step.if && !(await checkProjectStepConditions(projectRefs, step.if))) {
+    //  console.log("deployment step " + idx + " skipped: conditions not met");
+    //}
+    
     let res;
     switch(step.action) {
       case "create":
@@ -387,18 +372,76 @@ async function deployProject() {
         res = await runDeploymentCreate2Step(projectYaml, i, step, signaturesYaml.signatures[i], projectRefs);
         break;
       case "call":
-        res = await runDeploymentCallStep(projectYaml, i, step, signaturesYaml.signatures[i], projectRefs);
+        res = await runDeploymentManagedCallStep(projectYaml, i, step, signaturesYaml.signatures[i], projectRefs);
         break;
     }
     if(res) {
-      console.log(" tx hash: " + res[0]);
+      if(res[0])
+        console.log(" tx hash: " + res[0]);
       deploymentPromises.push(res[1]);
+
+      if(step.await && res[1]) {
+        console.log(" awaiting confirmation...");
+        await res[1];
+      }
     }
   }
 
   console.log("deployment completed, awaiting confirmations...");
   await Promise.all(deploymentPromises);
   console.log("all transactions confirmed!");
+}
+
+async function checkProjectStepConditions(projectRefs, conditions) {
+  if(!conditions)
+    return true;
+  if(!Array.isArray(conditions))
+    conditions = [ conditions ];
+
+  for(let i = 0; i < conditions.length; i++) {
+    let condition = conditions[i];
+    let [leftSide, rightSide] = await Promise.all([
+      getProjectStepConditionTermValue(projectRefs, condition[0]),
+      getProjectStepConditionTermValue(projectRefs, condition[2]),
+    ]);
+    switch(condition[1]) {
+      case ">": if(!(leftSide > rightSide)) return false; break;
+      case ">=": if(!(leftSide >= rightSide)) return false; break;
+      case "<": if(!(leftSide < rightSide)) return false; break;
+      case "<=": if(!(leftSide <= rightSide)) return false; break;
+      case "==": if(!(leftSide == rightSide)) return false; break;
+      default:
+        console.log("invalid condition operator: " + condition[1]);
+        return false;
+    }
+  }
+
+  return true;
+}
+
+async function getProjectStepConditionTermValue(projectRefs, term) {
+  let fnmatch;
+  if((fnmatch = /^([^()]*)\(([^)]+)\)$/.exec(term))) {
+    let fnargs = fnmatch[2].split(",");
+    switch(fnmatch[1]) {
+      case "balance":
+        return await getBalance.apply(this, fnargs);
+      case "iscontract":
+        return await isContract.apply(this, fnargs);
+      default:
+        console.log("invalid condition term fn: " + fnmatch[1]);
+        return null;
+    }
+  }
+  
+  if(term === "true")
+    return true;
+  else if(term === "false")
+    return false;
+  else if(/^[0-9]+$/.exec(term))
+    return parseFloat(term);
+  else
+    return term;
 }
 
 async function checkProjectDependency(projectName, projectRefs) {
@@ -408,9 +451,53 @@ async function checkProjectDependency(projectName, projectRefs) {
     return false;
   }
   var projectYaml = yaml.parse(fs.readFileSync(path.join(projectPath, "deployment.yaml"), "utf-8"));
+
+  switch(projectYaml.mode) {
+    case "unmanaged":
+    case "standalone":
+      return await checkStandaloneProjectDependency(projectName, projectYaml, projectRefs);
+    case "managed":
+      return await checkManagedProjectDependency(projectName, projectYaml, projectRefs);
+  }
+}
+
+async function checkStandaloneProjectDependency(projectName, projectYaml, projectRefs) {
+  // collect exports
+  var exportKeys;
+  var allValid = true;
+  if(projectRefs && projectYaml.exports && (exportKeys = Object.keys(projectYaml.exports)).length > 0) {
+    for(let i = 0; i < exportKeys.length; i++) {
+      let exportKey = exportKeys[i];
+      let exportRef = projectYaml.exports[exportKey].split(":");
+      switch(exportRef[0]) {
+        case "contract":
+          projectRefs[projectName + "." + exportKey] = exportRef[1];
+          if(!(await isContract(exportRef[1]))) {
+            allValid = false;
+            console.log("dependency check for " + projectName + " failed: contract " + exportKey + " not found at " + exportRef[1]);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  return allValid;
+}
+
+async function checkManagedProjectDependency(projectName, projectYaml, projectRefs) {
   if(!projectYaml.steps || !Array.isArray(projectYaml.steps) || projectYaml.steps.length == 0) {
     console.log("dependency check for " + projectName + " skipped: no deployment steps in project");
     return true;
+  }
+
+  if(!deploymentManager) {
+    if(!(await checkProjectDependency("_manager", projectRefs))) {
+      console.log("dependency check for " + projectName + " failed: could not check managed dependency without DeploymentManager. Please deploy '_manager' project first!");
+      return false;
+    }
+    deploymentManager = new web3.eth.Contract(deploymentManagerContract.managerAbi, projectRefs["_manager.DeploymentManager"]);
   }
 
   // collect exports
@@ -419,9 +506,16 @@ async function checkProjectDependency(projectName, projectRefs) {
     for(let i = 0; i < exportKeys.length; i++) {
       let exportKey = exportKeys[i];
       let exportRef = projectYaml.exports[exportKey].split(":");
+      let exportVal;
       switch(exportRef[0]) {
         case "create":
-          projectRefs[projectName + "." + exportKey] = await deploymentManager.methods["getCreateAddress"](projectYaml.account.address, projectYaml.account.salt, parseInt(exportRef[1])).call();
+          exportVal = await deploymentManager.methods["getCreateAddress"](projectYaml.account.address, projectYaml.account.salt, parseInt(exportRef[1])).call();
+          if(exportRef.length > 2) {
+            for(let ridx = 2; ridx < exportRef.length; ridx++) {
+              exportVal = resolveCreateAddr(exportVal, parseInt(exportRef[ridx]));
+            }
+          }
+          projectRefs[projectName + "." + exportKey] = exportVal;
           break;
         default:
           break;
@@ -446,9 +540,46 @@ async function checkProjectDependency(projectName, projectRefs) {
   return true;
 }
 
+function resolveCreateAddr(addr, nonce) {
+  var data;
+  if (nonce == 0x00) 
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1"], 
+      ["0xd6", "0x94", addr, "0x80"]
+    );
+  else if (nonce <= 0x7f) 
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1"], 
+      ["0xd6", "0x94", addr, "0x"+nonce.toString(16).padStart(2, "0")]
+    );
+  else if (nonce <= 0xff) 
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1", "uint8"], 
+      ["0xd7", "0x94", addr, "0x81", "0x"+nonce.toString(16).padStart(2, "0")]
+    );
+  else if (nonce <= 0xffff) 
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1", "uint16"], 
+      ["0xd8", "0x94", addr, "0x82", "0x"+nonce.toString(16).padStart(4, "0")]
+    );
+  else if (nonce <= 0xffffff)
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1", "uint24"], 
+      ["0xd9", "0x94", addr, "0x83", "0x"+nonce.toString(16).padStart(6, "0")]
+    );
+  else 
+    data = ethers.solidityPacked(
+      ["bytes1", "bytes1", "address", "bytes1", "uint32"], 
+      ["0xda", "0x94", addr, "0x84", "0x"+nonce.toString(16).padStart(8, "0")]
+    );
+  
+  var dataHash = ethers.keccak256(data);
+  var createAddr = "0x" + dataHash.substring(dataHash.length - 40);
+  return Web3.utils.toChecksumAddress(createAddr);
+}
 
 async function runDeploymentCreateStep(projectYaml, idx, step, signature, projectRefs) {
-  console.log("deployment step " + idx + ": create");
+  console.log("deployment step " + (idx+1) + ": create");
 
   var callData = deploymentManager.methods["createFor"](
     // createFor(address account, uint account_salt, bytes memory bytecode, uint128 callNonce, bytes memory signature)
@@ -468,7 +599,7 @@ async function runDeploymentCreateStep(projectYaml, idx, step, signature, projec
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
-    to: state.manager,
+    to: projectRefs["_manager.DeploymentManager"],
     value: 0,
     data: callData
   };
@@ -485,7 +616,7 @@ async function runDeploymentCreateStep(projectYaml, idx, step, signature, projec
 }
 
 async function runDeploymentCreate2Step(projectYaml, idx, step, signature, projectRefs) {
-  console.log("deployment step " + idx + ": create2");
+  console.log("deployment step " + (idx+1) + ": create2");
 
   var callData = deploymentManager.methods["create2For"](
     // create2For(address account, uint account_salt, uint salt, bytes memory bytecode, uint128 callNonce, bytes memory signature)
@@ -506,7 +637,7 @@ async function runDeploymentCreate2Step(projectYaml, idx, step, signature, proje
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
-    to: state.manager,
+    to: projectRefs["_manager.DeploymentManager"],
     value: 0,
     data: callData
   };
@@ -522,8 +653,8 @@ async function runDeploymentCreate2Step(projectYaml, idx, step, signature, proje
   return txres;
 }
 
-async function runDeploymentCallStep(projectYaml, idx, step, signature, projectRefs) {
-  console.log("deployment step " + idx + ": call");
+async function runDeploymentManagedCallStep(projectYaml, idx, step, signature, projectRefs) {
+  console.log("deployment step " + (idx+1) + ": call");
 
   var callData = deploymentManager.methods["callFor"](
     // callFor(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 callNonce, bytes memory signature)
@@ -531,7 +662,7 @@ async function runDeploymentCallStep(projectYaml, idx, step, signature, projectR
     projectYaml.account.salt,
     step.address,
     "0x" + (step.amount || 0).toString(16),
-    Buffer.from(step.data.replace(/^0x/, ""), "hex"),
+    step.data ? Buffer.from(step.data.replace(/^0x/, ""), "hex") : "0x",
     idx,
     Buffer.from(signature.replace(/^0x/, ""), "hex")
   ).encodeABI();
@@ -543,9 +674,42 @@ async function runDeploymentCallStep(projectYaml, idx, step, signature, projectR
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
-    to: state.manager,
+    to: projectRefs["_manager.DeploymentManager"],
     value: 0,
     data: callData
+  };
+
+  var privateKey = Uint8Array.from(wallet.privkey);
+  var tx = EthTx.FeeMarketEIP1559Transaction.fromTxData(rawTx, { common: web3Common });
+  tx = tx.sign(privateKey);
+
+  var txhex = tx.serialize().toString('hex');
+  var txres = await publishTransaction(txhex);
+  wallet.nonce++;
+
+  return txres;
+}
+
+async function runDeploymentPublishStep(projectYaml, idx, step, projectRefs) {
+  console.log("deployment step " + (idx+1) + ": publish");
+  if(!step.transaction)
+    return;
+  return await publishTransaction(step.transaction.replace(/^0x/, ""));
+}
+
+async function runDeploymentCallStep(projectYaml, idx, step, projectRefs) {
+  console.log("deployment step " + (idx+1) + ": unmanaged call");
+
+  var nonce = wallet.nonce;
+  var rawTx = {
+    nonce: nonce,
+    gasLimit: step.gas || projectYaml.gas || 10000000,
+    maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
+    maxFeePerGas: options['maxfeepergas'] * 1000000000,
+    from: wallet.addr,
+    to: step.address,
+    value: "0x" + (step.amount || 0).toString(16),
+    data: step.data ? Buffer.from(step.data.replace(/^0x/, ""), "hex") : "0x"
   };
 
   var privateKey = Uint8Array.from(wallet.privkey);

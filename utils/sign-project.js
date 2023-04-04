@@ -20,7 +20,13 @@ const readline = require("readline");
   }
 
   var projectYaml = yaml.parse(fs.readFileSync("./projects/" + projectName + "/deployment.yaml", "utf8"));
-  //console.log(projectYaml);
+  if(projectYaml.mode !== "managed") {
+    console.error("Project '" + projectName + "' is not in 'managed' mode. Signing not required.");
+    process.exit();
+  }
+  
+  var managerYaml = yaml.parse(fs.readFileSync("./projects/_manager/deployment.yaml", "utf8"));
+  var managerAddr = managerYaml.exports["DeploymentManager"].replace(/^contract:/, "");
 
   console.log("Project: " + projectName);
   console.log("Owner address: " + projectYaml.account.address);
@@ -69,13 +75,15 @@ const readline = require("readline");
       case "create":
         // keccak256(abi.encodePacked("create:", account, account_salt, nonce, bytecode))
         stepMessage = ethers.solidityPacked([
+          "address",
           "string",
           "address",
           "uint",
           "uint128",
           "bytes"
         ], [
-          "create:",
+          managerAddr,
+          ":create:",
           projectYaml.account.address,
           projectYaml.account.salt,
           callNonce,
@@ -85,6 +93,7 @@ const readline = require("readline");
       case "create2":
         // keccak256(abi.encodePacked("create2:", account, account_salt, nonce, salt, bytecode))
         stepMessage = ethers.solidityPacked([
+          "address",
           "string",
           "address",
           "uint",
@@ -92,7 +101,8 @@ const readline = require("readline");
           "uint",
           "bytes"
         ], [
-          "create2:",
+          managerAddr,
+          ":create2:",
           projectYaml.account.address,
           projectYaml.account.salt,
           callNonce,
@@ -103,6 +113,7 @@ const readline = require("readline");
       case "call":
         // keccak256(abi.encodePacked("call:", account, account_salt, nonce, addr, amount, data))
         stepMessage = ethers.solidityPacked([
+          "address",
           "string",
           "address",
           "uint",
@@ -111,7 +122,8 @@ const readline = require("readline");
           "uint",
           "bytes"
         ], [
-          "call:",
+          managerAddr,
+          ":call:",
           projectYaml.account.address,
           projectYaml.account.salt,
           callNonce,
@@ -142,10 +154,22 @@ const readline = require("readline");
     callNonce++;
   }
 
-  var sigYaml = yaml.stringify({
-    signatures: deploymentSigs
-  },
-  { lineWidth: 0 });
-  fs.writeFileSync("./projects/" + projectName + "/signatures.yaml", sigYaml);
+  var sigFile = "./projects/" + projectName + "/signatures.yaml";
+  var sigYaml;
+  if(fs.existsSync(sigFile)) {
+    sigYaml = yaml.parse(fs.readFileSync(sigFile, "utf-8"))
+  }
+  else {
+    sigYaml = {};
+  }
+
+  sigYaml[managerAddr.toLowerCase()] = {
+    signtime: Math.floor((new Date()).getTime() / 1000),
+    signatures: deploymentSigs,
+  };
+  
+  fs.writeFileSync(sigFile, yaml.stringify(sigYaml, {
+    lineWidth: 0
+  }));
 
 })();

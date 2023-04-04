@@ -153,16 +153,16 @@ contract DeploymentManager {
         deployer.call(addr, amount, data);
     }
 
-    function getCreateHash(address account, uint account_salt, bytes memory bytecode, uint128 nonce) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked("create:", account, account_salt, nonce, bytecode));
+    function getCreateHash(address account, uint account_salt, bytes memory bytecode, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":create:", account, account_salt, nonce, bytecode));
     }
 
-    function getCreate2Hash(address account, uint account_salt, uint salt, bytes memory bytecode, uint128 nonce) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked("create2:", account, account_salt, nonce, salt, bytecode));
+    function getCreate2Hash(address account, uint account_salt, uint salt, bytes memory bytecode, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":create2:", account, account_salt, nonce, salt, bytecode));
     }
 
-    function getCallHash(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 nonce) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked("call:", account, account_salt, nonce, addr, amount, data));
+    function getCallHash(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":call:", account, account_salt, nonce, addr, amount, data));
     }
 
 }
