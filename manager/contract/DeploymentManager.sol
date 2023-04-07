@@ -7,10 +7,29 @@ interface IDeploymentAccount {
     function create(bytes memory bytecode) external returns (address);
     function create2(uint salt, bytes memory bytecode) external returns (address);
     function call(address addr, uint256 amount, bytes calldata data) external;
+    function delegate(address addr, bytes calldata data) external;
+    function nop() external;
 }
 
-contract DeploymentManager {
-    mapping(bytes32 => address) private _deploymentAccounts;
+contract DeploymentManagerStorage {
+    // proxy storage
+    uint internal _version;
+    address internal _manager;
+    address internal _implementation;
+
+    // manager storage
+    mapping(bytes32 => address) internal _deploymentAccounts;
+}
+
+contract DeploymentManager is DeploymentManagerStorage {
+    
+    function version() public pure returns (uint) {
+        return 1;
+    }
+
+    function checkVersion(uint minver) public pure {
+        require(version() >= minver, "version lower");
+    }
 
     function _ensureDeploymentAccount(address account, uint account_salt) internal returns (address) {
         bytes32 deployerKey = keccak256(abi.encodePacked(account, account_salt));
@@ -85,6 +104,16 @@ contract DeploymentManager {
         return deployer.call(addr, amount, data);
     }
 
+    function delegate(uint account_salt, address addr, bytes calldata data) public {
+        IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
+        return deployer.delegate(addr, data);
+    }
+
+    function nop(uint account_salt) public {
+        IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
+        return deployer.nop();
+    }
+
     function recoverSigner(
         bytes32 _ethSignedMessageHash,
         bytes memory _signature
@@ -153,6 +182,26 @@ contract DeploymentManager {
         deployer.call(addr, amount, data);
     }
 
+    function delegateFor(address account, uint account_salt, address addr, bytes memory data, uint128 callNonce, bytes memory signature) public {
+        bytes32 messageHash = getDelegateHash(account, account_salt, addr, data, callNonce);
+        require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
+
+        IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
+        require(deployer.callNonce() == callNonce, "nonce missmatch");
+
+        deployer.delegate(addr, data);
+    }
+
+    function nopFor(address account, uint account_salt, uint128 callNonce, bytes memory signature) public {
+        bytes32 messageHash = getNopHash(account, account_salt, callNonce);
+        require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
+
+        IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
+        require(deployer.callNonce() == callNonce, "nonce missmatch");
+
+        deployer.nop();
+    }
+
     function getCreateHash(address account, uint account_salt, bytes memory bytecode, uint128 nonce) public view returns(bytes32) {
         return keccak256(abi.encodePacked(address(this), ":create:", account, account_salt, nonce, bytecode));
     }
@@ -163,6 +212,14 @@ contract DeploymentManager {
 
     function getCallHash(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 nonce) public view returns(bytes32) {
         return keccak256(abi.encodePacked(address(this), ":call:", account, account_salt, nonce, addr, amount, data));
+    }
+
+    function getDelegateHash(address account, uint account_salt, address addr, bytes memory data, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":delegate:", account, account_salt, nonce, addr, data));
+    }
+
+    function getNopHash(address account, uint account_salt, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":nop:", account, account_salt, nonce));
     }
 
 }
@@ -234,5 +291,20 @@ contract DeploymentAccount is IDeploymentAccount {
 
         (bool sent, ) = payable(addr).call{value: amount}(data);
         require(sent, "call failed");
+    }
+
+    function delegate(address addr, bytes calldata data) public {
+        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
+
+        _callNonce++;
+
+        (bool sent, ) = payable(addr).delegatecall(data);
+        require(sent, "call failed");
+    }
+
+    function nop() public {
+        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
+
+        _callNonce++;
     }
 }

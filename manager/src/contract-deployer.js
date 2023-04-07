@@ -68,6 +68,13 @@ const optionDefinitions = [
     typeLabel: '{underline 1.2}',
     defaultValue: 1.2,
   },
+  {
+    name: 'maxgaslimit',
+    description: 'The maximum gaslimit per transaction.',
+    type: Number,
+    typeLabel: '{underline 10000000}',
+    defaultValue: 10000000,
+  },
 ];
 
 const options = commandLineArgs(optionDefinitions, { stopAtFirstUnknown: true });
@@ -123,6 +130,12 @@ function sleepPromise(timeout) {
 
 function weiToEth(wei) {
   return parseInt((wei / 1000000000000000n).toString()) / 1000;
+}
+
+function getGasLimit(limit) {
+  if (limit > options['maxgaslimit'])
+    limit = options['maxgaslimit'];
+  return limit;
 }
 
 function loadPrivateKey() {
@@ -595,7 +608,7 @@ async function runDeploymentCreateStep(projectYaml, idx, step, signature, projec
   var nonce = wallet.nonce;
   var rawTx = {
     nonce: nonce,
-    gasLimit: step.gas || projectYaml.gas || 10000000,
+    gasLimit: getGasLimit(step.gas || projectYaml.gas || 10000000),
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
@@ -633,7 +646,7 @@ async function runDeploymentCreate2Step(projectYaml, idx, step, signature, proje
   var nonce = wallet.nonce;
   var rawTx = {
     nonce: nonce,
-    gasLimit: step.gas || projectYaml.gas || 10000000,
+    gasLimit: getGasLimit(step.gas || projectYaml.gas || 10000000),
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
@@ -670,7 +683,7 @@ async function runDeploymentManagedCallStep(projectYaml, idx, step, signature, p
   var nonce = wallet.nonce;
   var rawTx = {
     nonce: nonce,
-    gasLimit: step.gas || projectYaml.gas || 10000000,
+    gasLimit: getGasLimit(step.gas || projectYaml.gas || 10000000),
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
@@ -703,7 +716,7 @@ async function runDeploymentCallStep(projectYaml, idx, step, projectRefs) {
   var nonce = wallet.nonce;
   var rawTx = {
     nonce: nonce,
-    gasLimit: step.gas || projectYaml.gas || 10000000,
+    gasLimit: getGasLimit(step.gas || projectYaml.gas || 10000000),
     maxPriorityFeePerGas: options['maxpriofee'] * 1000000000,
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,

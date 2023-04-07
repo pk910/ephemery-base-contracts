@@ -3,11 +3,11 @@ mode: "managed"
 account:
   address: "0x49e0fd3800C117357057534E30c5B5115C673488"
   salt: 5
-  # deployer address: 0x057663A0532081804807B1282d688A4FAd2006aA
+  # deployer address: 0x0Ddc4A14006F5A338c66c2911A8C43abF09d6630
 
 exports:
-  "SplitMain": "create:1" # 0x7Fc3e3c0fADEa9C3BfEED302b866682D213b415e
-  "SplitWallet": "create:1:1" # 0x6958Cc124Ac2e422e70F13b424aFED0AE36Bc081
+  "SplitMain": "create:1" # 0x2F7aaC5aCa53554919bE6b69b639c65178Eb3Dcd
+  "SplitWallet": "create:1:1" # 0xde8Aff8E0767e0e439bC58D170af469C10190C73
 
 steps:
   - # deploy SplitMain

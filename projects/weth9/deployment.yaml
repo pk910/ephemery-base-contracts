@@ -3,10 +3,10 @@ mode: "managed"
 account:
   address: "0x49e0fd3800C117357057534E30c5B5115C673488"
   salt: 1
-  # deployer address: 0xc256b0166be0785C6b4D25065F3Ceda411f26a3a
+  # deployer address: 0x4bafDFd2DDDB2865B116D5691cfF4F8cBB66db97
 
 exports:
-  "WETH9": "create:1" # 0xbaF46E6a2907c8a56544C7F33ba2eDA0817CdCD0
+  "WETH9": "create:1" # 0xFaFA3a410334FC28c42e79e5FF2B3c86D4537399
 
 steps:
   - # deploy WETH9
