@@ -757,9 +757,12 @@ async function verifyContractSources(projectPath, projectYaml) {
   for(let cIdx = 0; cIdx < verifyContracts.length; cIdx++) {
     let codeInput = projectYaml['code-verify'][verifyContracts[cIdx]];
     try {
-      codeInput.inputData = fs.readFileSync(path.join(projectPath, codeInput.input), "utf-8");
+      if(codeInput.input)
+        codeInput.inputData = fs.readFileSync(path.join(projectPath, codeInput.input), "utf-8");
+      if(codeInput.code)
+        codeInput.codeData = fs.readFileSync(path.join(projectPath, codeInput.code), "utf-8");
     } catch(ex) {
-      console.log("could not find input json for " + verifyContracts[cIdx]);
+      console.log("could not find input code/json for " + verifyContracts[cIdx]);
       continue;
     }
 
@@ -788,21 +791,44 @@ async function verifyContractSources(projectPath, projectYaml) {
 }
 
 async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
-  let rsp = await fetch(explorer.url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-    },
-    body: encodeFormBody({
-      "module": "contract",
-      "action": "verifysourcecode",
-      "codeformat": "solidity-standard-json-input",
-      "contractaddress": contractAddr,
-      "contractname": codeInput.contract,
-      "compilerversion": codeInput.compiler,
-      "sourceCode": codeInput.inputData
-    })
-  });
+  let rsp;
+  if(codeInput.input) {
+    rsp = await fetch(explorer.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: encodeFormBody({
+        "module": "contract",
+        "action": "verifysourcecode",
+        "codeformat": "solidity-standard-json-input",
+        "contractaddress": contractAddr,
+        "contractname": codeInput.contract,
+        "compilerversion": codeInput.compiler,
+        "sourceCode": codeInput.inputData
+      })
+    });
+  }
+  else {
+    rsp = await fetch(explorer.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: encodeFormBody({
+        "module": "contract",
+        "action": "verify",
+        "addressHash": contractAddr,
+        "name": codeInput.contract,
+        "compilerVersion": codeInput.compiler,
+        "optimization": codeInput.optimize ? "true" : "false",
+        "optimizationRuns": codeInput.optimize ? codeInput.optimize : 0,
+        "evmVersion": codeInput.evmver,
+        "contractSourceCode": codeInput.codeData,
+        "autodetectConstructorArguments": "true"
+      })
+    });
+  }
   return await rsp.json();
 }
 

@@ -39,13 +39,13 @@ steps:
     data: "0x5a8b1a9f0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000ce9358e8ee25984f6eee4c69d49a11e115f92fef00000000000000000000000000000000000000000000000000000000000000013100000000000000000000000000000000000000000000000000000000000000"
 
 code-verify:
-  #"0x884F21ceA6ef235360DdfcC50623D1092E1d8224": # EternalStorageProxyForStormMultisender
-  #  input: "code-input-01.sol"
-  #  compiler: "v0.4.20+commit.3155dd80"
-  #  optimize: 200
-  #  contract: "EternalStorageProxyForStormMultisender"
+  "0x884F21ceA6ef235360DdfcC50623D1092E1d8224": # EternalStorageProxyForStormMultisender
+    code: "code-input-01.sol"
+    compiler: "v0.4.20+commit.3155dd80"
+    optimize: 200
+    contract: "EternalStorageProxyForStormMultisender"
   #"0xCE9358E8eE25984f6EEE4C69d49A11E115F92FEF": # UpgradebleStormSender
-  #  input: "code-input-02.sol"
+  #  code: "code-input-02.sol"
   #  compiler: "v0.4.20+commit.3155dd80"
   #  contract: "UpgradebleStormSender"
   "0x10b1f72b576C9b60f0360969bF712FB1E3C9c49B": # UpgradebleStormSenderInit
