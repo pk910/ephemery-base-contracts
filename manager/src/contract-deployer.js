@@ -812,8 +812,6 @@ async function verifyBlockscoutSource(explorer, contractAddr, codeInput, project
   let csrfMatch = /<input name="_csrf_token" [^>]*value="([^"]+)">/.exec(csrfText);
   let csrfToken = csrfMatch ? csrfMatch[1] : null;
 
-  console.log("csrfToken ", csrfToken);
-
   let formData = new FormData();
   formData.append("address_hash", contractAddr);
   formData.append("verification_type", "json:standard");
@@ -827,14 +825,10 @@ async function verifyBlockscoutSource(explorer, contractAddr, codeInput, project
   formData.append("button", "");
   formData.append("file[0]", fs.createReadStream(path.join(projectPath, codeInput.input)));
 
-  let rsp = await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
+  await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
     method: 'POST',
     body: formData
   });
-  console.log(rsp);
-  let rspJson = await rsp.json();
-  console.log(rspJson);
-  return rspJson;
 }
 
 function encodeFormBody(data) {
@@ -844,6 +838,6 @@ function encodeFormBody(data) {
     var encodedValue = encodeURIComponent(data[property]);
     formBody.push(encodedKey + "=" + encodedValue);
   }
-  console.log(formBody.join("&"));
+  //console.log(formBody.join("&"));
   return formBody.join("&");
 }
