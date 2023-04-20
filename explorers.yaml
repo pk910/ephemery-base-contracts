@@ -1,0 +1,6 @@
+
+explorers:
+  - url: "https://explorer.ephemery.dev/api"
+    type: "blockscout"
+  #- url: "https://explorer.ephemery.pk910.de/api"
+  #  type: "blockscout"

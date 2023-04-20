@@ -4,6 +4,8 @@ const path = require("path");
 const commandLineArgs = require('command-line-args');
 const commandLineUsage = require('command-line-usage');
 const yaml = require("yaml");
+const fetch = require("node-fetch");
+const FormData = require('form-data');
 const RLP = require('rlp');
 const Web3 = require('web3');
 const ethers = require("ethers");
@@ -40,14 +42,6 @@ const optionDefinitions = [
     defaultValue: 'http://127.0.0.1:8545'
   },
   {
-    name: 'state',
-    description: 'Path to state json file.',
-    alias: 's',
-    type: String,
-    typeLabel: '{underline ./deployment-state.json}',
-    defaultValue: './deployment-state.json'
-  },
-  {
     name: 'privkey',
     description: 'The private key of the deployer wallet.\n(Special: "env" to read from DEPLOYER_PRIVKEY environment variable)',
     alias: 'p',
@@ -74,6 +68,11 @@ const optionDefinitions = [
     type: Number,
     typeLabel: '{underline 10000000}',
     defaultValue: 10000000,
+  },
+  {
+    name: 'verify-sources',
+    description: 'Verify contract sources with block explorers.',
+    type: Boolean,
   },
 ];
 
@@ -261,6 +260,10 @@ async function deployProject() {
   if(!(await checkProjectDependency(options['project'], projectRefs))) {
     console.log("Deployment completed, but dependency check still fails");
     return;
+  }
+
+  if(options['verify-sources']) {
+    await verifyContractSources(projectPath, projectYaml);
   }
 
   console.log("Project references:");
@@ -734,4 +737,113 @@ async function runDeploymentCallStep(projectYaml, idx, step, projectRefs) {
   wallet.nonce++;
 
   return txres;
+}
+
+async function verifyContractSources(projectPath, projectYaml) {
+  var verifyContracts = projectYaml['code-verify'] ? Object.keys(projectYaml['code-verify']) : [];
+  if(verifyContracts.length == 0)
+    return;
+
+  // load explorers.yaml
+  if(!fs.existsSync("explorers.yaml")) {
+    console.log("could not find explorers.yaml");
+    return;
+  }
+  var explorersYaml = yaml.parse(fs.readFileSync("explorers.yaml", "utf-8"));
+  var explorers = explorersYaml.explorers || [];
+  if(explorers.length == 0)
+    return;
+
+  for(let cIdx = 0; cIdx < verifyContracts.length; cIdx++) {
+    let codeInput = projectYaml['code-verify'][verifyContracts[cIdx]];
+    try {
+      codeInput.inputData = fs.readFileSync(path.join(projectPath, codeInput.input), "utf-8");
+    } catch(ex) {
+      console.log("could not find input json for " + verifyContracts[cIdx]);
+      continue;
+    }
+
+    for(let eIdx = 0; eIdx < explorers.length; eIdx++) {
+      let explorer = explorers[eIdx];
+      try {
+        let res;
+        switch(explorer.type) {
+          case "blockscout":
+          case "etherscan":
+            res = await verifyEtherscanSource(explorer, verifyContracts[cIdx], codeInput);
+            break;
+          case "blockscout-alt":
+            res = await verifyBlockscoutSource(explorer, verifyContracts[cIdx], codeInput, projectPath);
+            break;
+          default:
+            res = null;
+            break;
+        }
+        console.log("sent contract source for " + verifyContracts[cIdx] + " to " + explorer.url + ":", res);
+      } catch(ex) {
+        console.log("error while verifying contract source for " + verifyContracts[cIdx] + " with " + explorer.url + ": " + ex.toString());
+      }
+    }
+  }
+}
+
+async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
+  let rsp = await fetch(explorer.url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+    },
+    body: encodeFormBody({
+      "module": "contract",
+      "action": "verifysourcecode",
+      "codeformat": "solidity-standard-json-input",
+      "contractaddress": contractAddr,
+      "contractname": codeInput.contract,
+      "compilerversion": codeInput.compiler,
+      "sourceCode": codeInput.inputData
+    })
+  });
+  return await rsp.json();
+}
+
+async function verifyBlockscoutSource(explorer, contractAddr, codeInput, projectPath) {
+  let csrfRsp = await fetch(explorer.url + "/address/" + contractAddr + "/verify-via-standard-json-input/new");
+  let csrfText = await csrfRsp.text();
+  let csrfMatch = /<input name="_csrf_token" [^>]*value="([^"]+)">/.exec(csrfText);
+  let csrfToken = csrfMatch ? csrfMatch[1] : null;
+
+  console.log("csrfToken ", csrfToken);
+
+  let formData = new FormData();
+  formData.append("address_hash", contractAddr);
+  formData.append("verification_type", "json:standard");
+  formData.append("_csrf_token", csrfToken);
+  formData.append("smart_contract[address_hash]", contractAddr);
+  formData.append("smart_contract[name]", codeInput.contract);
+  formData.append("smart_contract[nightly_builds]", "false");
+  formData.append("smart_contract[compiler_version]", codeInput.compiler);
+  formData.append("smart_contract[autodetect_constructor_args]", "true");
+  formData.append("smart_contract[constructor_arguments]", "");
+  formData.append("button", "");
+  formData.append("file[0]", fs.createReadStream(path.join(projectPath, codeInput.input)));
+
+  let rsp = await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
+    method: 'POST',
+    body: formData
+  });
+  console.log(rsp);
+  let rspJson = await rsp.json();
+  console.log(rspJson);
+  return rspJson;
+}
+
+function encodeFormBody(data) {
+  var formBody = [];
+  for (var property in data) {
+    var encodedKey = encodeURIComponent(property);
+    var encodedValue = encodeURIComponent(data[property]);
+    formBody.push(encodedKey + "=" + encodedValue);
+  }
+  console.log(formBody.join("&"));
+  return formBody.join("&");
 }
