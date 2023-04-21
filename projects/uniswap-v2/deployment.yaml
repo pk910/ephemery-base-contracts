@@ -30,6 +30,7 @@ code-verify:
     evmver: "istanbul"
     optimize: 999999
     contract: "UniswapV2Factory"
+    constructor: "0000000000000000000000000e9a1178acb643f9cfc6c47cef778454a69bd25b"
   "0x5deb141CCE09b2719f6d1F7F479681298e4a3dAB": # UniswapV2Router02
     code: "code-input-02.sol"
     compiler: "v0.6.6+commit.6c089d02"

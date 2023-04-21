@@ -782,9 +782,9 @@ async function verifyContractSources(projectPath, projectYaml) {
             res = null;
             break;
         }
-        console.log("sent contract source for " + verifyContracts[cIdx] + " to " + explorer.url + ":", res);
+        console.log("verify contract source for " + verifyContracts[cIdx] + " (" + codeInput.contract + ") on " + explorer.url + ":", res);
       } catch(ex) {
-        console.log("error while verifying contract source for " + verifyContracts[cIdx] + " with " + explorer.url + ": " + ex.toString());
+        console.log("error while verifying contract source for " + verifyContracts[cIdx] + " with " + explorer.url + ": " + ex.toString(), ex.stack);
       }
     }
   }
@@ -805,7 +805,8 @@ async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
         "contractaddress": contractAddr,
         "contractname": codeInput.contract,
         "compilerversion": codeInput.compiler,
-        "sourceCode": codeInput.inputData
+        "sourceCode": codeInput.inputData,
+        "autodetectConstructorArguments": 1
       })
     });
   }
@@ -821,11 +822,11 @@ async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
         "addressHash": contractAddr,
         "name": codeInput.contract,
         "compilerVersion": codeInput.compiler,
-        "optimization": codeInput.optimize ? "true" : "false",
+        "optimization": codeInput.optimize ? true : false,
         "optimizationRuns": codeInput.optimize ? codeInput.optimize : 0,
         "evmVersion": codeInput.evmver,
         "contractSourceCode": codeInput.codeData,
-        "autodetectConstructorArguments": "true"
+        "autodetectConstructorArguments": true
       })
     });
   }
@@ -837,24 +838,54 @@ async function verifyBlockscoutSource(explorer, contractAddr, codeInput, project
   let csrfText = await csrfRsp.text();
   let csrfMatch = /<input name="_csrf_token" [^>]*value="([^"]+)">/.exec(csrfText);
   let csrfToken = csrfMatch ? csrfMatch[1] : null;
+  if(!csrfToken) {
+    if(csrfText.match(/Verified at/))
+      return "already verified";
+
+    throw "no csrf token";
+  }
 
   let formData = new FormData();
-  formData.append("address_hash", contractAddr);
-  formData.append("verification_type", "json:standard");
   formData.append("_csrf_token", csrfToken);
   formData.append("smart_contract[address_hash]", contractAddr);
   formData.append("smart_contract[name]", codeInput.contract);
   formData.append("smart_contract[nightly_builds]", "false");
   formData.append("smart_contract[compiler_version]", codeInput.compiler);
-  formData.append("smart_contract[autodetect_constructor_args]", "true");
-  formData.append("smart_contract[constructor_arguments]", "");
-  formData.append("button", "");
-  formData.append("file[0]", fs.createReadStream(path.join(projectPath, codeInput.input)));
 
-  await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
-    method: 'POST',
-    body: formData
-  });
+  if(codeInput.constructor) {
+    formData.append("smart_contract[autodetect_constructor_args]", "false");
+    formData.append("smart_contract[constructor_args]", codeInput.constructor);
+  }
+  else {
+    formData.append("smart_contract[autodetect_constructor_args]", "true");
+    formData.append("smart_contract[constructor_args]", "");
+  }
+
+  if(codeInput.input) {
+    formData.append("address_hash", contractAddr);
+    formData.append("verification_type", "json:standard");
+    formData.append("smart_contract[constructor_arguments]", "");
+    formData.append("button", "");
+    formData.append("file[0]", fs.createReadStream(path.join(projectPath, codeInput.input)));
+
+    await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
+      method: 'POST',
+      body: formData
+    });
+    return "success (json-input)";
+  }
+  else {
+    formData.append("smart_contract[evm_version]", codeInput.evmver || "default");
+    formData.append("smart_contract[optimization]", codeInput.optimize ? "true" : "false");
+    formData.append("smart_contract[optimization_runs]", codeInput.optimize ? codeInput.optimize : "0");
+    formData.append("smart_contract[contract_source_code]", codeInput.codeData);
+
+    await fetch(explorer.url + "/verify_smart_contract/contract_verifications", {
+      method: 'POST',
+      body: formData
+    });
+    return "success (code-input)";
+  }
 }
 
 function encodeFormBody(data) {
