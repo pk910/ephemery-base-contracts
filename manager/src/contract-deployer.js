@@ -830,7 +830,13 @@ async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
       })
     });
   }
-  return await rsp.json();
+  let rspJson = await rsp.json();
+  if(rspJson.status == "1")
+    return "OK";
+  if(rspJson.message && rspJson.message.match(/already verified/))
+    return "already verified";
+  
+  return rspJson;
 }
 
 async function verifyBlockscoutSource(explorer, contractAddr, codeInput, projectPath) {
