@@ -824,7 +824,7 @@ async function verifyEtherscanSource(explorer, contractAddr, codeInput) {
         "compilerVersion": codeInput.compiler,
         "optimization": codeInput.optimize ? true : false,
         "optimizationRuns": codeInput.optimize ? codeInput.optimize : 0,
-        "evmVersion": codeInput.evmver,
+        "evmVersion": codeInput.evmver || "default",
         "contractSourceCode": codeInput.codeData,
         "autodetectConstructorArguments": true
       })
@@ -854,17 +854,16 @@ async function verifyBlockscoutSource(explorer, contractAddr, codeInput, project
 
   if(codeInput.constructor) {
     formData.append("smart_contract[autodetect_constructor_args]", "false");
-    formData.append("smart_contract[constructor_args]", codeInput.constructor);
+    formData.append("smart_contract[constructor_arguments]", codeInput.constructor);
   }
   else {
     formData.append("smart_contract[autodetect_constructor_args]", "true");
-    formData.append("smart_contract[constructor_args]", "");
+    formData.append("smart_contract[constructor_arguments]", "");
   }
 
   if(codeInput.input) {
     formData.append("address_hash", contractAddr);
     formData.append("verification_type", "json:standard");
-    formData.append("smart_contract[constructor_arguments]", "");
     formData.append("button", "");
     formData.append("file[0]", fs.createReadStream(path.join(projectPath, codeInput.input)));
 
