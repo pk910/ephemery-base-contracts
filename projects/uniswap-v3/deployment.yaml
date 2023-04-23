@@ -87,3 +87,29 @@ steps:
     address: "0xe19e15Cc2F715ce0F20578cc236390A10cFe9345"
     amount: 0
     data: "0xf2fde38b0000000000000000000000006fa8049973667a62eabc259bdddf4073d5518546"
+
+code-verify:
+  "0x002A10766Aa64fD61154de3a7A7B5459aBC9b065": # UniswapV3Factory
+    input: "code-input-01.json"
+    compiler: "v0.7.6+commit.7338295f"
+    contract: "UniswapV3Factory"
+  "0x996aC39dF9a3088Ccd13bd621940D795e4f51F5d": # UniswapInterfaceMulticall
+    input: "code-input-02.json"
+    compiler: "v0.7.6+commit.7338295f"
+    contract: "UniswapInterfaceMulticall"
+  "0xe19e15Cc2F715ce0F20578cc236390A10cFe9345": # ProxyAdmin
+    input: "code-input-03.json"
+    compiler: "v0.7.4+commit.3f05b770"
+    contract: "ProxyAdmin"
+  "0x188f6F593cEf467935F5c4a16247af0a86B6eAf0": # TickLens
+    input: "code-input-04.json"
+    compiler: "v0.7.6+commit.7338295f"
+    contract: "TickLens"
+  "0xBb6f222E71Eb636c44Dc79e48C5B046Fbc45AE10": # NFTDescriptor
+    input: "code-input-05.json"
+    compiler: "v0.7.6+commit.7338295f"
+    contract: "NFTDescriptor"
+  "0x2C2a36A098192F76701C87c5AbCa40C7007415fB": # NonfungibleTokenPositionDescriptor
+    input: "code-input-06.json"
+    compiler: "v0.7.6+commit.7338295f"
+    contract: "NonfungibleTokenPositionDescriptor"
