@@ -68,11 +68,11 @@ contract DeploymentManagerInit {
         require(sent, "call failed");
     }
 
-    function nop(uint128 callNonce, bytes memory signature) public {
+    function nop(uint16 count, uint128 callNonce, bytes memory signature) public {
         require(_deploymentNonce == callNonce, "nonce missmatch");
-        bytes32 messageHash = keccak256(abi.encodePacked(address(this), ":dnop:", callNonce));
+        bytes32 messageHash = keccak256(abi.encodePacked(address(this), ":dnop:", count, callNonce));
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == _deploymentManager, "invalid signature");
         
-        _deploymentNonce++;
+        _deploymentNonce += count;
     }
 }

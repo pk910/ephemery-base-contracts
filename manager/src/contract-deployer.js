@@ -691,7 +691,7 @@ async function runDeploymentManagedCallStep(projectYaml, idx, step, signature, p
     maxFeePerGas: options['maxfeepergas'] * 1000000000,
     from: wallet.addr,
     to: projectRefs["_manager.DeploymentManager"],
-    value: 0,
+    value: "0x"+BigInt(step.amount).toString(16),
     data: callData
   };
 

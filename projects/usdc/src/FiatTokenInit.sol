@@ -13,9 +13,9 @@ contract FiatTokenInit {
         address _blacklister,
         address _owner
     ) public {
-        address owner = 0xAAf6278C3B4C8f404DfF1D1C845d6F21CDF68729;
+        address owner = 0x812ef6b41D93cBd34918EC7a93e0BD909e9a92FB;
         require(msg.sender == owner, "not owner");
-        address(0x495329339740ec6FD192C2F616815498181e7065).delegatecall(
+        address(0x1dc51d340830e27FdA69E659a22059Fc51FdD87e).delegatecall(
             abi.encodeWithSignature(
                 "initialize(string,string,string,uint8,address,address,address,address)",
                 _name,

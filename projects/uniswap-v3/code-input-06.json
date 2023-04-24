@@ -126,7 +126,7 @@
     },
     "libraries": {
       "contracts/libraries/NFTDescriptor.sol": {
-        "NFTDescriptor": "0xBb6f222E71Eb636c44Dc79e48C5B046Fbc45AE10"
+        "NFTDescriptor": "0x6425142C4Ea4391d5487Fc353AaCe8698151b965"
       }
     }
   }

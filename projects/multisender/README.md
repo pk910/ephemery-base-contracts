@@ -8,8 +8,8 @@ Owner: `0x49e0fd3800C117357057534E30c5B5115C673488` / 7  (pk910)
 
 | Contract | Address | Source |
 | -------- | ------- | ------ |
-| EternalStorageProxyForStormMultisender  | `0x884F21ceA6ef235360DdfcC50623D1092E1d8224`  | [EternalStorageProxyForStormMultisender.sol](https://github.com/rstormsf/multisender/blob/master/contracts/contracts/EternalStorageProxyForStormMultisender.sol) / [flat](https://github.com/rstormsf/multisender/blob/master/contracts/flats/EternalStorageProxyForStormMultisender_flat.sol) |
-| UpgradebleStormSender  | `0xCE9358E8eE25984f6EEE4C69d49A11E115F92FEF`  | [UpgradebleStormSender.sol](https://github.com/rstormsf/multisender/blob/master/contracts/contracts/multisender/UpgradebleStormSender.sol)  / [flat](https://github.com/rstormsf/multisender/blob/master/contracts/flats/UpgradebleStormSender_flat.sol) |
+| EternalStorageProxyForStormMultisender  | `0xaB6A3A55286c61969b7137080aA14c8B1a31E06d`  | [EternalStorageProxyForStormMultisender.sol](https://github.com/rstormsf/multisender/blob/master/contracts/contracts/EternalStorageProxyForStormMultisender.sol) / [flat](https://github.com/rstormsf/multisender/blob/master/contracts/flats/EternalStorageProxyForStormMultisender_flat.sol) |
+| UpgradebleStormSender  | `0xCC799D8b255CB9CEfa38475aaD188d18d7B68981`  | [UpgradebleStormSender.sol](https://github.com/rstormsf/multisender/blob/master/contracts/contracts/multisender/UpgradebleStormSender.sol)  / [flat](https://github.com/rstormsf/multisender/blob/master/contracts/flats/UpgradebleStormSender_flat.sol) |
 
 ## Customization
 

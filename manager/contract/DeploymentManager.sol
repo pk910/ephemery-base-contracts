@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import "./DeploymentAccount.sol";
+
 interface IDeploymentAccount {
     function nonce() external view returns (uint128);
     function callNonce() external view returns (uint128);
-    function create(bytes memory bytecode) external returns (address);
-    function create2(uint salt, bytes memory bytecode) external returns (address);
-    function call(address addr, uint256 amount, bytes calldata data) external;
-    function delegate(address addr, bytes calldata data) external;
-    function nop() external;
+    function create(bytes memory bytecode) external payable returns (address);
+    function create2(uint salt, bytes memory bytecode) external payable returns (address);
+    function call(address addr, uint256 amount, bytes calldata data) external payable;
+    function delegate(address addr, bytes calldata data) external payable;
+    function nop(uint16 count) external;
 }
 
 contract DeploymentManagerStorage {
@@ -29,6 +31,10 @@ contract DeploymentManager is DeploymentManagerStorage {
 
     function checkVersion(uint minver) public pure {
         require(version() >= minver, "version lower");
+    }
+
+    function getDeploymentAccountImplementation() public pure returns (address) {
+        return address(0xd7Dc947cB361260e6bd157C9b7edA59f68499605);
     }
 
     function _ensureDeploymentAccount(address account, uint account_salt) internal returns (address) {
@@ -75,7 +81,7 @@ contract DeploymentManager is DeploymentManagerStorage {
         else if (nonce <= 0xff)     data = abi.encodePacked(bytes1(0xd7), bytes1(0x94), deployer, bytes1(0x81), uint8(nonce));
         else if (nonce <= 0xffff)   data = abi.encodePacked(bytes1(0xd8), bytes1(0x94), deployer, bytes1(0x82), uint16(nonce));
         else if (nonce <= 0xffffff) data = abi.encodePacked(bytes1(0xd9), bytes1(0x94), deployer, bytes1(0x83), uint24(nonce));
-        else                         data = abi.encodePacked(bytes1(0xda), bytes1(0x94), deployer, bytes1(0x84), uint32(nonce));
+        else                        data = abi.encodePacked(bytes1(0xda), bytes1(0x94), deployer, bytes1(0x84), uint32(nonce));
         return address(uint160(uint256(keccak256(data))));
     }
 
@@ -89,29 +95,29 @@ contract DeploymentManager is DeploymentManagerStorage {
         return address (uint160(uint(hash)));
     }
 
-    function create(uint account_salt, bytes memory bytecode) public returns (address) {
+    function create(uint account_salt, bytes memory bytecode) public payable returns (address) {
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
-        return deployer.create(bytecode);
+        return deployer.create{value: msg.value}(bytecode);
     }
 
-    function create2(uint account_salt, uint salt, bytes memory bytecode) public returns (address) {
+    function create2(uint account_salt, uint salt, bytes memory bytecode) public payable returns (address) {
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
-        return deployer.create2(salt, bytecode);
+        return deployer.create2{value: msg.value}(salt, bytecode);
     }
 
-    function call(uint account_salt, address addr, uint256 amount, bytes calldata data) public {
+    function call(uint account_salt, address addr, uint256 amount, bytes calldata data) public payable {
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
-        return deployer.call(addr, amount, data);
+        return deployer.call{value: msg.value}(addr, amount, data);
     }
 
-    function delegate(uint account_salt, address addr, bytes calldata data) public {
+    function delegate(uint account_salt, address addr, bytes calldata data) public payable {
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
-        return deployer.delegate(addr, data);
+        return deployer.delegate{value: msg.value}(addr, data);
     }
 
-    function nop(uint account_salt) public {
+    function nop(uint account_salt, uint16 count) public {
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(msg.sender, account_salt));
-        return deployer.nop();
+        return deployer.nop(count);
     }
 
     function recoverSigner(
@@ -152,54 +158,54 @@ contract DeploymentManager is DeploymentManagerStorage {
     }
 
 
-    function createFor(address account, uint account_salt, bytes memory bytecode, uint128 callNonce, bytes memory signature) public returns (address) {
+    function createFor(address account, uint account_salt, bytes memory bytecode, uint128 callNonce, bytes memory signature) public payable returns (address) {
         bytes32 messageHash = getCreateHash(account, account_salt, bytecode, callNonce);
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
 
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
         require(deployer.callNonce() == callNonce, "nonce missmatch");
 
-        return deployer.create(bytecode);
+        return deployer.create{value: msg.value}(bytecode);
     }
 
-    function create2For(address account, uint account_salt, uint salt, bytes memory bytecode, uint128 callNonce, bytes memory signature) public returns (address) {
+    function create2For(address account, uint account_salt, uint salt, bytes memory bytecode, uint128 callNonce, bytes memory signature) public payable returns (address) {
         bytes32 messageHash = getCreate2Hash(account, account_salt, salt, bytecode, callNonce);
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
 
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
         require(deployer.callNonce() == callNonce, "nonce missmatch");
 
-        return deployer.create2(salt, bytecode);
+        return deployer.create2{value: msg.value}(salt, bytecode);
     }
 
-    function callFor(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 callNonce, bytes memory signature) public {
+    function callFor(address account, uint account_salt, address addr, uint256 amount, bytes memory data, uint128 callNonce, bytes memory signature) public payable {
         bytes32 messageHash = getCallHash(account, account_salt, addr, amount, data, callNonce);
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
 
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
         require(deployer.callNonce() == callNonce, "nonce missmatch");
 
-        deployer.call(addr, amount, data);
+        deployer.call{value: msg.value}(addr, amount, data);
     }
 
-    function delegateFor(address account, uint account_salt, address addr, bytes memory data, uint128 callNonce, bytes memory signature) public {
+    function delegateFor(address account, uint account_salt, address addr, bytes memory data, uint128 callNonce, bytes memory signature) public payable {
         bytes32 messageHash = getDelegateHash(account, account_salt, addr, data, callNonce);
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
 
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
         require(deployer.callNonce() == callNonce, "nonce missmatch");
 
-        deployer.delegate(addr, data);
+        deployer.delegate{value: msg.value}(addr, data);
     }
 
-    function nopFor(address account, uint account_salt, uint128 callNonce, bytes memory signature) public {
-        bytes32 messageHash = getNopHash(account, account_salt, callNonce);
+    function nopFor(address account, uint account_salt, uint16 count, uint128 callNonce, bytes memory signature) public {
+        bytes32 messageHash = getNopHash(account, account_salt, count, callNonce);
         require(recoverSigner(getEthSignatureHash(messageHash), signature) == account, "invalid signature");
 
         IDeploymentAccount deployer = IDeploymentAccount(_ensureDeploymentAccount(account, account_salt));
         require(deployer.callNonce() == callNonce, "nonce missmatch");
 
-        deployer.nop();
+        deployer.nop(count);
     }
 
     function getCreateHash(address account, uint account_salt, bytes memory bytecode, uint128 nonce) public view returns(bytes32) {
@@ -218,93 +224,8 @@ contract DeploymentManager is DeploymentManagerStorage {
         return keccak256(abi.encodePacked(address(this), ":delegate:", account, account_salt, nonce, addr, data));
     }
 
-    function getNopHash(address account, uint account_salt, uint128 nonce) public view returns(bytes32) {
-        return keccak256(abi.encodePacked(address(this), ":nop:", account, account_salt, nonce));
+    function getNopHash(address account, uint account_salt, uint16 count, uint128 nonce) public view returns(bytes32) {
+        return keccak256(abi.encodePacked(address(this), ":nop:", account, account_salt, count, nonce));
     }
 
-}
-
-contract DeploymentAccount is IDeploymentAccount {
-    address public _owner;
-    address public _manager;
-    uint128 private _nonce;
-    uint128 private _callNonce;
-
-    constructor(address owner) {
-        _owner = owner;
-        _manager = msg.sender;
-        _nonce = 1;
-        _callNonce = 0;
-    }
-
-    function nonce() public view returns (uint128) {
-        return _nonce;
-    }
-
-    function callNonce() public view returns (uint128) {
-        return _callNonce;
-    }
-
-    function create(bytes memory bytecode) public returns (address) {
-        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
-
-        _nonce++;
-        _callNonce++;
-
-        address addr;
-        assembly {
-            addr := create(0, add(bytecode, 0x20), mload(bytecode))
-
-            if iszero(extcodesize(addr)) {
-                revert(0, 0)
-            }
-        }
-        require(addr != address(0), "create failed");
-        return addr;
-    }
-
-    function create2(uint salt, bytes memory bytecode) public returns (address) {
-        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
-
-        _nonce++;
-        _callNonce++;
-
-        address addr;
-        assembly {
-            addr := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
-
-            if iszero(extcodesize(addr)) {
-                revert(0, 0)
-            }
-        }
-        require(addr != address(0), "create2 failed");
-        return addr;
-    }
-
-    function call(address addr, uint256 amount, bytes calldata data) public {
-        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
-
-        _callNonce++;
-
-        uint balance = address(this).balance;
-        require(balance >= amount, "amount exceeds wallet balance");
-
-        (bool sent, ) = payable(addr).call{value: amount}(data);
-        require(sent, "call failed");
-    }
-
-    function delegate(address addr, bytes calldata data) public {
-        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
-
-        _callNonce++;
-
-        (bool sent, ) = payable(addr).delegatecall(data);
-        require(sent, "call failed");
-    }
-
-    function nop() public {
-        require(msg.sender == _owner || msg.sender == _manager, "not owner or manager");
-
-        _callNonce++;
-    }
 }
