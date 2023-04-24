@@ -677,7 +677,7 @@ async function runDeploymentManagedCallStep(projectYaml, idx, step, signature, p
     projectYaml.account.address,
     projectYaml.account.salt,
     step.address,
-    "0x" + (step.amount || 0).toString(16),
+    "0x"+BigInt(step.amount).toString(16),
     step.data ? Buffer.from(step.data.replace(/^0x/, ""), "hex") : "0x",
     idx,
     Buffer.from(signature.replace(/^0x/, ""), "hex")

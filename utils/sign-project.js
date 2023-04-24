@@ -128,7 +128,7 @@ const readline = require("readline");
           projectYaml.account.salt,
           callNonce,
           deploymentSteps[i].address,
-          deploymentSteps[i].amount,
+          "0x"+BigInt(deploymentSteps[i].amount).toString(16),
           Buffer.from(deploymentSteps[i].data.replace(/^0x/, ""), "hex")
         ]);
         break;
