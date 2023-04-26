@@ -10,7 +10,8 @@ exports:
   "UniswapV2Router02": "create:2" # 0xc5B3F18273D1CEF2A8cFd9e73Cdf78c9504D2512
 
 dependencies:
-  - "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
+  - project: "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
+    required: true
 
 steps:
   - # deploy UniswapV2Factory

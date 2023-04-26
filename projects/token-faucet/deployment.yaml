@@ -7,6 +7,7 @@ account:
 
 exports:
   "TokenFaucet": "create:1" # 0x746789E5B988e9dA56552fe6dE6eC671C01A2336
+  "TokenFaucetImplementation": "create:2" # 0x8aA6Db19d2658Bce0a3937D5Cd7F6b19d9CCeE16
 
 steps:
   - # deploy TokenFaucetProxy
