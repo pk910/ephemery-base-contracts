@@ -87,7 +87,7 @@ const readline = require("readline");
           projectYaml.account.address,
           projectYaml.account.salt,
           callNonce,
-          Buffer.from(deploymentSteps[i].bytecode, "hex")
+          Buffer.from(deploymentSteps[i].bytecode.replace(/^0x/, ""), "hex")
         ]);
         break;
       case "create2":
@@ -107,7 +107,7 @@ const readline = require("readline");
           projectYaml.account.salt,
           callNonce,
           deploymentSteps[i].salt,
-          Buffer.from(deploymentSteps[i].bytecode, "hex")
+          Buffer.from(deploymentSteps[i].bytecode.replace(/^0x/, ""), "hex")
         ]);
         break;
       case "call":
