@@ -18,12 +18,12 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
-    "@ethereumjs/common": "^3.1.2",
     "@ethereumjs/tx": "^4.1.2",
     "command-line-args": "^5.2.1",
     "command-line-usage": "^7.0.1",
     "ethereumjs-util": "^7.1.5",
     "ethers": "^6.2.3",
+    "web3": "^1.9.0",
     "yaml": "^2.2.2"
   }
 }

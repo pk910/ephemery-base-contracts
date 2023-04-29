@@ -78,6 +78,10 @@ interface IDeployCommandArgs {
   project: string;
 };
 
+interface ISignCommandArgs {
+  project: string;
+};
+
 const cliCommandDefinition: {
   [command: string]: {
     description: string;
@@ -99,7 +103,18 @@ const cliCommandDefinition: {
         defaultOption: true
       },
     ]
-  }
+  },
+  "sign": {
+    description: "",
+    args: [
+      {
+        name: 'project',
+        type: String,
+        typeLabel: '{underline project}',
+        defaultOption: true
+      },
+    ]
+  },
 };
 
 

@@ -1,5 +1,5 @@
 
-import ethers from "ethers"
+import * as ethers from "ethers"
 
 export function calculateCreateAddr(addr: string, nonce: number): string {
   let data: string;

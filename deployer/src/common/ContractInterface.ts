@@ -1,5 +1,5 @@
 
-import ethers from "ethers"
+import * as ethers from "ethers"
 import { AbiItem } from 'web3-utils';
 import { Contract } from 'web3-eth-contract';
 import { Web3Manager } from './Web3Manager';
