@@ -6,32 +6,20 @@ import { weiToEth } from "../utils/EthUnits";
 import { PromiseDfd } from "../utils/PromiseDfd";
 import { Logger } from "./Logger";
 
-interface Web3WalletState {
-  address: string;
-  balance: bigint;
-  nonce: number;
-}
+export type TTransactionPromise = [txhash: string, receipt: Promise<TransactionReceipt>];
 
 export class Web3Manager {
   public static instance: Web3Manager;
 
   private rpchost: string;
-  private wallet: Web3WalletState;
   private ready: boolean;
   private readyPromise: Promise<void>;
   private web3: Web3;
   private chainId: number;
 
 
-  public constructor(rpchost: string, wallet?: string) {
+  public constructor(rpchost: string) {
     this.rpchost = rpchost;
-    if(wallet) {
-      this.wallet = {
-        address: wallet,
-        balance: 0n,
-        nonce: 0
-      };
-    }
 
     this.initWeb3();
     Web3Manager.instance = this;
@@ -46,16 +34,7 @@ export class Web3Manager {
       let initPromises: Promise<void>[] = [
         this.web3.eth.getChainId().then((chainId) => { this.chainId = chainId; })
       ];
-      if(this.wallet) {
-        initPromises.push(this.web3.eth.getBalance(this.wallet.address).then((balance) => { this.wallet.balance = BigInt(balance); }));
-        initPromises.push(this.web3.eth.getTransactionCount(this.wallet.address).then((nonce) => { this.wallet.nonce = nonce; }));
-      }
-
-      this.readyPromise = Promise.all(initPromises).then(() => {
-        if(this.wallet) {
-          Logger.info("Web3Manager.initWeb3", "wallet " + this.wallet.address + " balance: " + weiToEth(this.wallet.balance) + " ETH [nonce: " + this.wallet.nonce + "]")
-        }
-      });
+      this.readyPromise = Promise.all(initPromises).then();
       
     } catch(ex) {
       Logger.error("Web3Manager.initWeb3", "web3 initialization error: ", ex);
@@ -73,8 +52,19 @@ export class Web3Manager {
     let balance = await this.web3.eth.getBalance(addr);
     return BigInt(balance);
   }
-  
-  public async publishTransaction(txhex: string): Promise<[txhash: string, receipt: Promise<TransactionReceipt>]> {
+
+  public async getTransactionCount(addr: string): Promise<number> {
+    await this.readyPromise;
+    let txcount = await this.web3.eth.getTransactionCount(addr);
+    return txcount;
+  }
+
+  public async getChainId(): Promise<number> {
+    await this.readyPromise;
+    return this.chainId;
+  }
+
+  public async publishTransaction(txhex: string): Promise<TTransactionPromise> {
     let txhashDfd = new PromiseDfd<string>();
     let receiptDfd = new PromiseDfd<TransactionReceipt>();
     let txStatus = 0;

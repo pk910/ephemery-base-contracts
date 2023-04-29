@@ -2,7 +2,7 @@
 import commandLineArgs from "command-line-args"
 import * as commandLineUsage from "command-line-usage"
 
-export interface CliArgs {
+export interface CliArgs<TComArgs = any> {
   verbose: boolean;
   rpchost: string;
   privkey?: string;
@@ -11,7 +11,7 @@ export interface CliArgs {
   maxgaslimit?: number;
 
   command: string;
-  commandArgs: any;
+  commandArgs: TComArgs;
 }
 
 const globalOptionsDefinition: commandLineUsage.OptionDefinition[] = [
@@ -72,6 +72,12 @@ const globalOptionsDefinition: commandLineUsage.OptionDefinition[] = [
   },
 ];
 
+
+interface IDeployCommandArgs {
+  'verify-sources': boolean;
+  project: string;
+};
+
 const cliCommandDefinition: {
   [command: string]: {
     description: string;
@@ -85,6 +91,12 @@ const cliCommandDefinition: {
         name: 'verify-sources',
         description: 'Verify contract sources with block explorers.',
         type: Boolean,
+      },
+      {
+        name: 'project',
+        type: String,
+        typeLabel: '{underline project}',
+        defaultOption: true
       },
     ]
   }

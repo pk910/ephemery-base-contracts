@@ -1,5 +1,5 @@
 import { parseCliArgs } from "./args";
-import { runDeployCommand } from "./command/deploy/command";
+import { runDeployCommand } from "./command/deploy";
 
 (async () => {
   // parse command line args

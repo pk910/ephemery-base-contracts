@@ -1,9 +1,5 @@
-
-import path from "path";
-import fs from "fs";
-import yaml from "yaml";
-import { ManagedProject } from "./ManagedProject";
-import { StandaloneProject } from "./StandaloneProject";
+import { TransactionBuilder } from "../common/TransactionBuilder";
+import { ProjectLoader } from "./ProjectLoader";
 
 export enum ProjectMode {
   STANDALONE = "standalone",
@@ -26,48 +22,17 @@ export interface IProjectYaml {
 
 export interface IProjectStepYaml {
   action: string;
+  await?: boolean;
 }
 
 export type TResolvedProjectExports = {[key: string]: string};
 
 export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYaml> {
-  private static projectDefinitions: {[project: string]: BaseProject} = {};
-
-  public static loadProject(projectName: string, projectPath?: string) {
-    if(this.projectDefinitions[projectName])
-      return this.projectDefinitions[projectName];
-
-    if(!projectPath) {
-      projectPath = path.join(".", "projects", projectName);
-    }
-
-    let projectYamlFile = path.join(projectPath, "deployment.yaml");
-    if(!fs.existsSync(projectYamlFile)) {
-      throw "could not load " + projectYamlFile;
-    }
-    let projectYaml = yaml.parse(fs.readFileSync(projectYamlFile, "utf-8"));
-
-    let projectDefinition: BaseProject;
-    switch(projectYaml.mode) {
-      case "standalone": 
-      case "unmanaged": 
-        projectDefinition = new StandaloneProject(projectName, projectPath, projectYaml);
-        break;
-      case "managed": 
-        projectDefinition = new ManagedProject(projectName, projectPath, projectYaml);
-        break;
-      default:
-        throw "unknown deployment mode '" + projectYaml.mode + "' (" + projectName + ")";
-    }
-    this.projectDefinitions[projectName] = projectDefinition;
-    return projectDefinition;
-  }
-
   protected projectName: string;
   protected projectPath: string;
   protected projectYaml: TProjectYaml;
 
-  protected constructor(projectName: string, projectPath: string, projectYaml: TProjectYaml) {
+  public constructor(projectName: string, projectPath: string, projectYaml: TProjectYaml) {
     this.projectName = projectName;
     this.projectPath = projectPath;
     this.projectYaml = projectYaml;
@@ -86,6 +51,7 @@ export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYa
 
   public abstract getMode(): ProjectMode;
   public abstract checkDeploymentStatus(): Promise<boolean>;
+  public abstract deployProject(txbuilder: TransactionBuilder): Promise<void>;
 
   public getDependencies(): string[] {
     if(!this.projectYaml.dependencies || !Array.isArray(this.projectYaml.dependencies) || this.projectYaml.dependencies.length == 0)
@@ -104,7 +70,7 @@ export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYa
     let checkProjects: string[] = [];
 
     if(this.getMode() == ProjectMode.MANAGED) {
-      let manager = BaseProject.loadProject(MANAGER_PROJECT);
+      let manager = ProjectLoader.loadProject(MANAGER_PROJECT);
       checkPromises.push(manager.checkDeploymentStatus());
       checkProjects.push(manager.getName());
     }
@@ -113,7 +79,7 @@ export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYa
       let importRef = this.projectYaml.dependencies[i];
       if(!importRef.required)
         continue;
-      let project = BaseProject.loadProject(importRef.project);
+      let project = ProjectLoader.loadProject(importRef.project);
       checkPromises.push(project.checkDeploymentStatus());
       checkProjects.push(project.getName());
     }
