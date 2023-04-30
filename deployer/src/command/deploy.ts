@@ -18,6 +18,7 @@ export async function runDeployCommand(options: CliArgs) {
     return;
   }
 
+  ProjectLoader.setProjectsPath(options.projects);
   let web3Manager = new Web3Manager(options.rpchost);
   let txBuilder = new TransactionBuilder({
     web3Manager: web3Manager,

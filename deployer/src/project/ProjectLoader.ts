@@ -6,14 +6,20 @@ import { ManagedProject } from "./ManagedProject";
 import { StandaloneProject } from "./StandaloneProject";
 
 export class ProjectLoader {
+  private static projectsPath: string;
   private static projectDefinitions: {[project: string]: BaseProject} = {};
+
+  public static setProjectsPath(projectsPath: string) {
+    this.projectsPath = projectsPath;
+  }
 
   public static loadProject(projectName: string, projectPath?: string) {
     if(this.projectDefinitions[projectName])
       return this.projectDefinitions[projectName];
 
     if(!projectPath) {
-      projectPath = path.join(".", "projects", projectName);
+      let basePath = this.projectsPath ? this.projectsPath : path.join(".", "projects");
+      projectPath = path.join(basePath, projectName);
     }
 
     let projectYamlFile = path.join(projectPath, "deployment.yaml");

@@ -77,6 +77,9 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
           refValue = calculateCreateAddr(refValue, parseInt(refSplit[ridx]));
         }
         break;
+      case "deployer":
+        refValue = this.getDeployerAddress();
+        break;
       default:
         refValue = super.resolveReference(ref);
         break;

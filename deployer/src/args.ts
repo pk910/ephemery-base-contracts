@@ -9,6 +9,7 @@ export interface CliArgs<TComArgs = any> {
   maxfeepergas?: number;
   maxpriofee?: number;
   maxgaslimit?: number;
+  projects: string;
 
   command: string;
   commandArgs: TComArgs;
@@ -63,6 +64,13 @@ const globalOptionsDefinition: commandLineUsage.OptionDefinition[] = [
     type: Number,
     typeLabel: '{underline 10000000}',
     defaultValue: 10000000,
+  },
+  {
+    name: 'projects',
+    description: 'The path to the projects directory.',
+    type: String,
+    typeLabel: '{underline projects}',
+    defaultValue: 'projects',
   },
   {
     name: 'command',

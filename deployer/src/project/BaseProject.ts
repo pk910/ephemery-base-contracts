@@ -101,14 +101,45 @@ export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYa
   }
 
   public resolveReference(ref: string): string {
-    let refSplit = ref.split(":");
+    let refSplit = ref.split(":", 2);
     let refValue = ref;
     switch(refSplit[0]) {
       case "contract":
         refValue = refSplit[1];
         break;
+      case "ref":
+        refValue = this.resolveProjectRef(refSplit[1]);
+        break;
+      case "ether":
+        let etherVal = parseFloat(refSplit[1]);
+        refValue = "0x" + (BigInt(etherVal * 1000000000) * 1000000000n).toString(16);
+        break;
     }
     return refValue;
+  }
+
+  public resolvePlaceholders(data: string): string {
+    if(!data)
+      return data;
+    return data.replace(/\{([^}]+)\}/g, (match) => {
+      let placeholder = match.substring(1, match.length-1);
+      let refValue = this.resolveReference(placeholder);
+      return refValue.replace(/^0x/, "");
+    });
+  }
+
+  private resolveProjectRef(ref: string): string {
+    let refPath = ref.split(".");
+    if(refPath.length === 1) {
+      // local reference
+      let exports = this.resolveExports();
+      return exports[refPath[0]];
+    }
+    else {
+      let project = ProjectLoader.loadProject(refPath[0]);
+      let exports = project.resolveExports();
+      return exports[refPath[1]];
+    }
   }
 
   public resolveExports(): TResolvedProjectExports {

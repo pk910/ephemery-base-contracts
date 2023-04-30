@@ -1,4 +1,5 @@
 import * as ethers from "ethers"
+import { AbiEncoder, IAbiCallYaml } from "../../common/AbiEncoder";
 import { Logger } from "../../common/Logger";
 import { TTransactionPromise } from "../../common/Web3Manager";
 import { IManagedProjectStepYaml, ManagedProject } from "../ManagedProject";
@@ -7,13 +8,18 @@ import { ManagedDeploymentStepContext } from "./DeploymentContext";
 export interface IManagedCreateStepYaml extends IManagedProjectStepYaml {
   action: "create";
   bytecode: string;
+  constructor?: IAbiCallYaml;
   gas?: number;
 }
 
 async function resolveStepData(project: ManagedProject, stepYaml: IManagedCreateStepYaml): Promise<{
   code: string;
 }> {
-  let createCode = "0x" + (stepYaml.bytecode ? stepYaml.bytecode.replace(/^0x/, "") : "");
+  let createCode = "0x" + (stepYaml.bytecode ? project.resolvePlaceholders(stepYaml.bytecode.replace(/^0x/, "")) : "");
+
+  if(stepYaml.constructor && typeof stepYaml.constructor !== "function") {
+    createCode += AbiEncoder.encodeConstructorYaml(project, stepYaml.constructor.abi, stepYaml.constructor.args).replace(/^0x/, "");
+  }
 
   return {
     code: createCode

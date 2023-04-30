@@ -1,8 +1,6 @@
 import { Logger } from "./Logger";
 import { TTransactionPromise, Web3Manager } from "./Web3Manager";
-import * as ethers from "ethers"
 import * as EthTx from "@ethereumjs/tx";
-import * as EthCom from "@ethereumjs/common";
 import * as EthUtil from "ethereumjs-util";
 import { weiToEth } from "../utils/EthUnits";
 

@@ -1,4 +1,5 @@
 import * as ethers from "ethers"
+import { AbiEncoder, IAbiCallYaml } from "../../common/AbiEncoder";
 import { Logger } from "../../common/Logger";
 import { TTransactionPromise } from "../../common/Web3Manager";
 import { IManagedProjectStepYaml, ManagedProject } from "../ManagedProject";
@@ -9,6 +10,7 @@ export interface IManagedCallStepYaml extends IManagedProjectStepYaml {
   address: string;
   amount: string;
   data?: string;
+  call?: IAbiCallYaml;
   gas?: number;
 }
 
@@ -17,9 +19,15 @@ async function resolveStepData(project: ManagedProject, stepYaml: IManagedCallSt
   amount: string;
   data: string;
 }> {
-  let callAddr = project.resolveReference(stepYaml.address);
-  let callAmount = "0x" + BigInt(stepYaml.amount).toString(16);
-  let callData = "0x" + (stepYaml.data ? stepYaml.data.replace(/^0x/, "") : "");
+  let callAddr = project.resolvePlaceholders(stepYaml.address);
+  let callAmount = "0x" + BigInt(project.resolvePlaceholders(stepYaml.amount)).toString(16);
+  let callData: string = "0x";
+  if(stepYaml.data) {
+    callData = "0x" + project.resolvePlaceholders(stepYaml.data.replace(/^0x/, ""));
+  }
+  else if(stepYaml.call) {
+    callData = AbiEncoder.encodeCallYaml(project, stepYaml.call);
+  }
 
   return {
     addr: callAddr,

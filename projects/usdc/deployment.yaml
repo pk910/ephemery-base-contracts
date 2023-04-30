@@ -6,6 +6,7 @@ account:
   # deployer address: 0x812ef6b41D93cBd34918EC7a93e0BD909e9a92FB
 
 exports:
+  "USDC": "create:3" # 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
   "FiatTokenInit": "create:1" # 0xbB39c23C7b552c787Ef92a6C15C1520Ae01138F7
   "FiatTokenV1": "create:2" # 0x1dc51d340830e27FdA69E659a22059Fc51FdD87e
   "FiatTokenProxy": "create:3" # 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
