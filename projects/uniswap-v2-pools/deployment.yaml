@@ -6,16 +6,11 @@ account:
   # deployer address: 0xA4D5208390Ce0d0EFF30239980B4a0439D730277
 
 dependencies:
-  - project: "token-faucet" # TokenFaucet: 0x746789E5B988e9dA56552fe6dE6eC671C01A2336
-    required: true
-  - project: "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
-    required: true
-  - project: "tether" # TetherToken: 0x9DD32D4F511996EFff334B6f4c1229757b963AA2
-    required: true
-  - project: "usdc" # USDC: 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
-    required: true
-  - project: "uniswap-v2" # UniswapV2Router02: 0xc5B3F18273D1CEF2A8cFd9e73Cdf78c9504D2512
-    required: true
+  - "token-faucet" # TokenFaucet: 0x746789E5B988e9dA56552fe6dE6eC671C01A2336
+  - "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
+  - "tether" # TetherToken: 0x9DD32D4F511996EFff334B6f4c1229757b963AA2
+  - "usdc" # USDC: 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
+  - "uniswap-v2" # UniswapV2Router02: 0xc5B3F18273D1CEF2A8cFd9e73Cdf78c9504D2512
 
 steps:
   - # create PairLiquidityProvider (0xA2Ed4D0D86fE2709807A337F50D17b4F43c76b68)

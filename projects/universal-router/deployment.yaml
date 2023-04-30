@@ -6,16 +6,11 @@ account:
   # deployer address: 0x11CfF5b8fB811Ef63C99796440b693a1B0a0F752
 
 dependencies:
-  - project: "permit2"
-    required: true
-  - project: "weth9"
-    required: true
-  - project: "seaport"
-    required: true
-  - project: "uniswap-v2"
-    required: true
-  - project: "uniswap-v3"
-    required: true
+  - "permit2"
+  - "weth9"
+  - "seaport"
+  - "uniswap-v2"
+  - "uniswap-v3"
 
 exports:
   "UnsupportedProtocol": "create:1" # 0xC372a6223F4e98e6Fa97e0bA79074A1CD774b3Ac

@@ -6,10 +6,8 @@ account:
   # deployer address: 0xfd46DF4c08a425e835A8E272d1ca2edff9D08194
 
 dependencies:
-  - project: "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
-    required: true
-  - project: "uniswap-v2" # UniswapV2Factory: 0xE8d5636117Ad5786dB1A7c84480F988F1a447c3c
-    required: true
+  - "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
+  - "uniswap-v2" # UniswapV2Factory: 0xE8d5636117Ad5786dB1A7c84480F988F1a447c3c
 
 exports:
   "UniswapV3Factory": "create:1" # 0x15D38a36319c0525276E5D69BeFfA7aB4f55845A

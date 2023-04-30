@@ -5,17 +5,15 @@ account:
   salt: 15
   # deployer address: 0xA4D5208390Ce0d0EFF30239980B4a0439D730277
 
+exports:
+  "PoolLiquidityProvider": "create:1" # 0x64deF03639e9cC87c93d266c90010D17616F7318
+
 dependencies:
-  - project: "token-faucet" # TokenFaucet: 0x746789E5B988e9dA56552fe6dE6eC671C01A2336
-    required: true
-  - project: "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
-    required: true
-  - project: "tether" # TetherToken: 0x9DD32D4F511996EFff334B6f4c1229757b963AA2
-    required: true
-  - project: "usdc" # USDC: 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
-    required: true
-  - project: "uniswap-v3" # UniswapV3Factory: 0x15D38a36319c0525276E5D69BeFfA7aB4f55845A
-    required: true
+  - "token-faucet" # TokenFaucet: 0x746789E5B988e9dA56552fe6dE6eC671C01A2336
+  - "weth9" # WETH9: 0x2cE89A6c99B45d1b62c1c07cAF731bF12d88C293
+  - "tether" # TetherToken: 0x9DD32D4F511996EFff334B6f4c1229757b963AA2
+  - "usdc" # USDC: 0x675d653aFC71A433ca5586ed4d52e64b5FFFE787
+  - "uniswap-v3" # UniswapV3Factory: 0x15D38a36319c0525276E5D69BeFfA7aB4f55845A
 
 steps:
   - # create PoolLiquidityProvider (0x64deF03639e9cC87c93d266c90010D17616F7318)
@@ -42,7 +40,7 @@ steps:
         - "0x2128422b231dc1486f5f3"
   - # request 1,000,000 USDT as PoolLiquidityProvider from TokenFaucet
     action: "call"
-    address: "0x{create:1}"
+    address: "0x{ref:PoolLiquidityProvider}"
     amount: "0x{ether:10000}" # 10000 ETH
     call:
       abi: "function call(address addr, bytes calldata data)"
@@ -54,7 +52,7 @@ steps:
             - "1000000000000" # 1000000 USDT
   - # provide liquidity for pool via PoolLiquidityProvider
     action: "call"
-    address: "0x{create:1}"
+    address: "0x{ref:PoolLiquidityProvider}"
     amount: "0x{ether:1050}" # 1050 ETH
     call:
       abi: "function provideLiquidity(address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired)"
@@ -72,39 +70,90 @@ steps:
     action: "call"
     address: "0x{ref:uniswap-v3.NonfungiblePositionManager}"
     amount: 0
-    data: "0x13ead5620000000000000000000000002ce89a6c99b45d1b62c1c07caf731bf12d88c293000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe7870000000000000000000000000000000000000000000000000000000000000bb800000000000000000000000000000000000000000002128422b231dc1486f5f3"
+    call:
+      abi: "function createAndInitializePoolIfNecessary(address token0, address token1, uint24 fee, uint160 sqrtPriceX96)"
+      args:
+        - "0x{ref:weth9.WETH9}"
+        - "0x{ref:usdc.USDC}"
+        - "3000"
+        - "0x2128422b231dc1486f5f3"
   - # request 1,000,000 USDC as PoolLiquidityProvider from TokenFaucet
     action: "call"
-    address: "0x64deF03639e9cC87c93d266c90010D17616F7318"
+    address: "0x{ref:PoolLiquidityProvider}"
     amount: "0x{ether:10000}" # 10000 ETH
-    data: "0x1b8b921d000000000000000000000000746789e5b988e9da56552fe6de6ec671c01a2336000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000441c11fce2000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe787000000000000000000000000000000000000000000000000000000e8d4a5100000000000000000000000000000000000000000000000000000000000"
+    call:
+      abi: "function call(address addr, bytes calldata data)"
+      args:
+        - "0x{ref:token-faucet.TokenFaucet}"
+        - abi: "function requestToken(address token, uint256 amount)"
+          args:
+            - "0x{ref:usdc.USDC}"
+            - "1000000000000" # 1000000 USDC
   - # provide liquidity for pool via PoolLiquidityProvider
     action: "call"
-    address: "0x64deF03639e9cC87c93d266c90010D17616F7318"
+    address: "0x{ref:PoolLiquidityProvider}"
     amount: "0x{ether:1050}" # 1050 ETH
-    data: "0xdd1427770000000000000000000000002ce89a6c99b45d1b62c1c07caf731bf12d88c293000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe7870000000000000000000000000000000000000000000000000000000000000bb8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc6148fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd4ba800000000000000000000000000000000000000000000003638be25ab7ae42219000000000000000000000000000000000000000000000000000000e8d4a51000"
+    call:
+      abi: "function provideLiquidity(address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired)"
+      args:
+        - "0x{ref:weth9.WETH9}"
+        - "0x{ref:usdc.USDC}"
+        - "3000"
+        - "-237240"
+        - "-177240"
+        - "1000212926910446182937" # 1000 ETH
+        - "1000000000000" # 1000000 USDC
 
   # USDC/USDT pool
   - # create & init pool
     action: "call"
     address: "0x{ref:uniswap-v3.NonfungiblePositionManager}"
     amount: 0
-    data: "0x13ead562000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe7870000000000000000000000009dd32d4f511996efff334b6f4c1229757b963aa200000000000000000000000000000000000000000000000000000000000001f40000000000000000000000000000000000000001000000000000000000000000"
+    call:
+      abi: "function createAndInitializePoolIfNecessary(address token0, address token1, uint24 fee, uint160 sqrtPriceX96)"
+      args:
+        - "0x{ref:usdc.USDC}"
+        - "0x{ref:tether.TetherToken}"
+        - "500"
+        - "0x1000000000000000000000000"
   - # request 1,000,000 USDT as PoolLiquidityProvider from TokenFaucet
     action: "call"
-    address: "0x64deF03639e9cC87c93d266c90010D17616F7318"
-    amount: "10000000000000000000000" # 10000 ETH
-    data: "0x1b8b921d000000000000000000000000746789e5b988e9da56552fe6de6ec671c01a2336000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000441c11fce20000000000000000000000009dd32d4f511996efff334b6f4c1229757b963aa2000000000000000000000000000000000000000000000000000000e8d4a5100000000000000000000000000000000000000000000000000000000000"
+    address: "0x{ref:PoolLiquidityProvider}"
+    amount: "0x{ether:10000}" # 10000 ETH
+    call:
+      abi: "function call(address addr, bytes calldata data)"
+      args:
+        - "0x{ref:token-faucet.TokenFaucet}"
+        - abi: "function requestToken(address token, uint256 amount)"
+          args:
+            - "0x{ref:tether.TetherToken}"
+            - "1000000000000" # 1000000 USDT
   - # request 1,000,000 USDC as PoolLiquidityProvider from TokenFaucet
     action: "call"
-    address: "0x64deF03639e9cC87c93d266c90010D17616F7318"
-    amount: "10000000000000000000000" # 10000 ETH
-    data: "0x1b8b921d000000000000000000000000746789e5b988e9da56552fe6de6ec671c01a2336000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000441c11fce2000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe787000000000000000000000000000000000000000000000000000000e8d4a5100000000000000000000000000000000000000000000000000000000000"
+    address: "0x{ref:PoolLiquidityProvider}"
+    amount: "0x{ether:10000}" # 10000 ETH
+    call:
+      abi: "function call(address addr, bytes calldata data)"
+      args:
+        - "0x{ref:token-faucet.TokenFaucet}"
+        - abi: "function requestToken(address token, uint256 amount)"
+          args:
+            - "0x{ref:usdc.USDC}"
+            - "1000000000000" # 1000000 USDC
   - # provide liquidity for pool via PoolLiquidityProvider
     action: "call"
-    address: "0x64deF03639e9cC87c93d266c90010D17616F7318"
+    address: "0x{ref:PoolLiquidityProvider}"
     amount: 0
-    data: "0xdd142777000000000000000000000000675d653afc71a433ca5586ed4d52e64b5fffe7870000000000000000000000009dd32d4f511996efff334b6f4c1229757b963aa200000000000000000000000000000000000000000000000000000000000001f4ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe4ee0000000000000000000000000000000000000000000000000000000000001b12000000000000000000000000000000000000000000000000000000e8d4a50fff000000000000000000000000000000000000000000000000000000e8d4a50fff"
+    call:
+      abi: "function provideLiquidity(address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired)"
+      args:
+        - "0x{ref:usdc.USDC}"
+        - "0x{ref:tether.TetherToken}"
+        - "500"
+        - "-6930"
+        - "6930"
+        - "999999999999" # 999999 USDC
+        - "999999999999" # 999999 USDT
 
 
 code-verify:
