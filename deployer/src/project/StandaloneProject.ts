@@ -11,7 +11,7 @@ export interface IStandaloneProjectYaml extends IProjectYaml {
     address: string;
     salt: number;
   }
-  steps?: (IStandaloneCallStepYaml | IStandalonePublishStepYaml)[];
+  steps?: IStandaloneProjectStepYaml[];
 }
 
 type TStandaloneProjectStepConditions = [string, string, string][];

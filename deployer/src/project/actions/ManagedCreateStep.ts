@@ -35,15 +35,14 @@ export async function deployManagedCreateStep(context: ManagedDeploymentStepCont
   let projectAccount = context.project.getProjectAccount();
   if((await context.txbuilder.getWalletAddress()).toLowerCase() == projectAccount[0].toLowerCase()) {
     // deploy from project owner wallet - use unsigned deployment
-    managedCallData = context.managerContract.methods["call"](
-      // create(address account, uint account_salt, bytes memory bytecode)
-      projectAccount[0],
+    managedCallData = context.managerContract.methods["create"](
+      // create(uint account_salt, bytes memory bytecode)
       projectAccount[1],
       stepData.code
     ).encodeABI();
   }
   else {
-    managedCallData = context.managerContract.methods["callFor"](
+    managedCallData = context.managerContract.methods["createFor"](
       // createFor(address account, uint account_salt, bytes memory bytecode, uint128 callNonce, bytes memory signature)
       projectAccount[0],
       projectAccount[1],

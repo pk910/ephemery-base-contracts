@@ -23,6 +23,7 @@ export interface IProjectYaml {
 export interface IProjectStepYaml {
   action: string;
   await?: boolean;
+  exit?: boolean;
 }
 
 export type TResolvedProjectExports = {[key: string]: string};

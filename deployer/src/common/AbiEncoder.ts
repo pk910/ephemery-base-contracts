@@ -6,7 +6,7 @@ export interface IAbiCallYaml {
   args: TAbiCallYaml[];
 }
 
-export type TAbiCallYaml = IAbiCallYaml | string;
+export type TAbiCallYaml = IAbiCallYaml | string | string[];
 
 export class AbiEncoder {
 
@@ -27,14 +27,20 @@ export class AbiEncoder {
     if(typeof callYaml === "string") {
       return project.resolvePlaceholders(callYaml);
     }
-    else {
+    else if(Array.isArray(callYaml)) {
+      return callYaml.map((arg) => this.encodeCallYaml(project, arg)) as any;
+    }
+    else if(callYaml.abi) {
       return this.encodeFunction(callYaml.abi, callYaml.args.map((arg) => this.encodeCallYaml(project, arg)));
+    }
+    else {
+      return callYaml as any;
     }
   }
 
   public static encodeConstructorYaml(project: BaseProject, abi: string, args: TAbiCallYaml[]): string {
     let iface = new ethers.Interface([abi]);
-    let argData = args.map((arg) => this.encodeCallYaml(project, arg));
+    let argData = args?.map((arg) => this.encodeCallYaml(project, arg));
     //console.log("encode constructor: ", abi, argData);
     return iface.encodeDeploy(argData);
   }

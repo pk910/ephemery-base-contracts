@@ -46,8 +46,7 @@ export async function deployManagedCallStep(context: ManagedDeploymentStepContex
   if((await context.txbuilder.getWalletAddress()).toLowerCase() == projectAccount[0].toLowerCase()) {
     // deploy from project owner wallet - use unsigned deployment
     managedCallData = context.managerContract.methods["call"](
-      // call(address account, uint account_salt, address addr, uint256 amount, bytes memory data)
-      projectAccount[0],
+      // call(uint account_salt, address addr, uint256 amount, bytes memory data)
       projectAccount[1],
       stepData.addr,
       stepData.amount,

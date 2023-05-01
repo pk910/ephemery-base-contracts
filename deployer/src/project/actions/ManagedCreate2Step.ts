@@ -1,4 +1,5 @@
 import * as ethers from "ethers"
+import { AbiEncoder, IAbiCallYaml } from "../../common/AbiEncoder";
 import { Logger } from "../../common/Logger";
 import { TTransactionPromise } from "../../common/Web3Manager";
 import { IManagedProjectStepYaml, ManagedProject } from "../ManagedProject";
@@ -8,6 +9,7 @@ export interface IManagedCreate2StepYaml extends IManagedProjectStepYaml {
   action: "create2";
   salt: string;
   bytecode: string;
+  constructor?: IAbiCallYaml;
   gas?: number;
 }
 
@@ -16,7 +18,11 @@ async function resolveStepData(project: ManagedProject, stepYaml: IManagedCreate
   code: string;
 }> {
   let createSalt = "0x" + BigInt(stepYaml.salt).toString(16);
-  let createCode = "0x" + (stepYaml.bytecode ? stepYaml.bytecode.replace(/^0x/, "") : "");
+  let createCode = "0x" + (stepYaml.bytecode ? project.resolvePlaceholders(stepYaml.bytecode.replace(/^0x/, "")) : "");
+
+  if(stepYaml.constructor && typeof stepYaml.constructor !== "function") {
+    createCode += AbiEncoder.encodeConstructorYaml(project, stepYaml.constructor.abi, stepYaml.constructor.args).replace(/^0x/, "");
+  }
 
   return {
     salt: createSalt,
@@ -34,8 +40,7 @@ export async function deployManagedCreate2Step(context: ManagedDeploymentStepCon
   if((await context.txbuilder.getWalletAddress()).toLowerCase() == projectAccount[0].toLowerCase()) {
     // deploy from project owner wallet - use unsigned deployment
     managedCallData = context.managerContract.methods["create2"](
-      // create2(address account, uint account_salt, uint salt, bytes memory bytecode)
-      projectAccount[0],
+      // create2(uint account_salt, uint salt, bytes memory bytecode)
       projectAccount[1],
       stepData.salt,
       stepData.code

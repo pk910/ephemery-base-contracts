@@ -8,7 +8,7 @@ import { deployManagedCreate2Step, getManagedCreate2StepHash, IManagedCreate2Ste
 import { BaseProject, IProjectStepYaml, IProjectYaml, MANAGER_PROJECT, ProjectMode } from "./BaseProject";
 import { calculateCreateAddr } from "../utils/CreateAddr";
 import { ProjectLoader } from "./ProjectLoader";
-import { TTransactionPromise } from "../common/Web3Manager";
+import { TTransactionPromise, Web3Manager } from "../common/Web3Manager";
 import { TransactionReceipt } from "web3-core"
 import { TransactionBuilder } from "../common/TransactionBuilder";
 import { Logger } from "../common/Logger";
@@ -63,6 +63,8 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
 
   public async getDeploymentNonce(): Promise<number> {
     let deployerAddr = this.getDeployerAddress();
+    if(!await Web3Manager.instance.isContract(deployerAddr))
+      return 0;
     let deployerContract = ContractInterface.getDeploymentAccount(deployerAddr);
     return parseInt(await deployerContract.methods["callNonce"]().call());
   }
@@ -88,7 +90,7 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
   }
   
   public async deployProject(txbuilder: TransactionBuilder): Promise<void> {
-    let managerContract = ContractInterface.getDeploymentAccount(this.getDeploymentManagerAddress());
+    let managerContract = ContractInterface.getDeploymentManager(this.getDeploymentManagerAddress());
     let deployerNonce = await this.getDeploymentNonce();
     if(!this.projectYaml.steps)
       return;
@@ -149,6 +151,9 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
 
       if(stepYaml.await) {
         await Promise.all(stepPromises);
+      }
+      if(stepYaml.exit) {
+        break;
       }
     }
 
