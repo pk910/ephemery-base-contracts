@@ -1,3 +1,4 @@
+import { ExplorerCodeVerifier, IExplorerYaml, TCodeInputYaml } from "../common/ExplorerCodeVerifier";
 import { TransactionBuilder } from "../common/TransactionBuilder";
 import { ProjectLoader } from "./ProjectLoader";
 
@@ -18,6 +19,7 @@ export interface IProjectYaml {
     [key: string]: string;
   };
   steps?: IProjectStepYaml[];
+  "code-verify"?: {[ref: string]: TCodeInputYaml};
 }
 
 export interface IProjectStepYaml {
@@ -152,6 +154,20 @@ export abstract class BaseProject<TProjectYaml extends IProjectYaml = IProjectYa
       exports[key] = this.resolveReference(this.projectYaml.exports[key]);
     });
     return exports;
+  }
+
+  public async verifyCodes(explorer: IExplorerYaml): Promise<{[addr: string]: string}> {
+    if(!this.projectYaml['code-verify'])
+      return {};
+    
+    let codeRefs = Object.keys(this.projectYaml['code-verify']);
+    let verifyResults: {[addr: string]: string} = {};
+    for(let idx = 0; idx < codeRefs.length; idx++) {
+      let contractAddr = this.resolveReference(codeRefs[idx]);
+      let codeInput = this.projectYaml['code-verify'][codeRefs[idx]];
+      verifyResults[contractAddr] = await ExplorerCodeVerifier.verifyProjectSource(contractAddr, codeInput, explorer, this.projectPath);
+    }
+    return verifyResults;
   }
 
 }

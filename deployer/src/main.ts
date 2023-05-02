@@ -1,6 +1,7 @@
 import { parseCliArgs } from "./args";
 import { runDeployCommand } from "./command/deploy";
 import { runSignCommand } from "./command/sign";
+import { runVerifyCodesCommand } from "./command/verify-codes";
 
 (async () => {
   // parse command line args
@@ -14,6 +15,9 @@ import { runSignCommand } from "./command/sign";
       break;
     case "sign":
       await runSignCommand(deployerArgs);
+      break;
+    case "verify-codes":
+      await runVerifyCodesCommand(deployerArgs);
       break;
   }
 

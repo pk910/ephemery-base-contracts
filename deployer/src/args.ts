@@ -80,16 +80,6 @@ const globalOptionsDefinition: commandLineUsage.OptionDefinition[] = [
   },
 ];
 
-
-interface IDeployCommandArgs {
-  'verify-sources': boolean;
-  project: string;
-};
-
-interface ISignCommandArgs {
-  project: string;
-};
-
 const cliCommandDefinition: {
   [command: string]: {
     description: string;
@@ -115,6 +105,23 @@ const cliCommandDefinition: {
   "sign": {
     description: "",
     args: [
+      {
+        name: 'project',
+        type: String,
+        typeLabel: '{underline project}',
+        defaultOption: true
+      },
+    ]
+  },
+  "verify-codes": {
+    description: "",
+    args: [
+      {
+        name: 'explorers',
+        type: String,
+        typeLabel: '{underline explorers.yaml}',
+        defaultValue: 'explorers.yaml'
+      },
       {
         name: 'project',
         type: String,
