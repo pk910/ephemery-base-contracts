@@ -269,6 +269,15 @@ steps:
       args:
         - "0xfdd5d5de6dd63db72bbc2d487944ba13bf775b50a80805fe6fcaba9b0fba88f5" # eth-ens-namehash.hash("resolver.eth")
         - "0x{ref:PublicResolver}"
+  - # Setting address of resolver node on PublicResolver
+    action: "call"
+    address: "0x{ref:PublicResolver}"
+    amount: 0
+    call:
+      abi: "function setAddr(bytes32 node, address a)"
+      args:
+        - "0xfdd5d5de6dd63db72bbc2d487944ba13bf775b50a80805fe6fcaba9b0fba88f5" # eth-ens-namehash.hash("resolver.eth")
+        - "0x{ref:PublicResolver}"
   - # Setting owner of eth node to registrar on root
     action: "call"
     address: "0x{ref:Root}"
@@ -278,7 +287,6 @@ steps:
       args:
         - "0x4f5b812789fc606be1b3b16908db13fc7a9adf7ca72641f84d75b47069d3d7f0" # js-sha3.keccak256('eth')
         - "0x{ref:BaseRegistrarImplementation}"
-  
 
 
 code-verify:
