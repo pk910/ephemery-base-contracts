@@ -6,7 +6,7 @@ git clone https://github.com/pk910/ephemery-base-contracts.git
 cd ephemery-base-contracts
 ```
 
-You can download pre-built binaries from the [leatest relase](https://github.com/pk910/ephemery-base-contracts/releases) (download to `bin` folder)
+You can download pre-built binaries from the [latest release](https://github.com/pk910/ephemery-base-contracts/releases) (download to `bin` folder)
 
 Or build them yourself (nodejs >18 required):
 ```
