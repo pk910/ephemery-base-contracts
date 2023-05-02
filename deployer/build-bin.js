@@ -14,7 +14,7 @@ const nexeUpxPlugin = require('./utils/nexe-upx-plugin');
   if (!fs.existsSync(buildPath))
     fs.mkdirSync(buildPath);
   
-  var binPath = path.join(__dirname, "bin");
+  var binPath = path.join(__dirname, "..", "bin");
   if (!fs.existsSync(binPath))
     fs.mkdirSync(binPath);
 
@@ -22,45 +22,40 @@ const nexeUpxPlugin = require('./utils/nexe-upx-plugin');
     {
       arch: 'linux-x64',
       output: 'deployer',
-      //target: 'linux-x64-14.15.3'
-      target: 'linux-x64-18.16.0'
+      target: 'linux-x64-14.15.3'
     },
-    /*
     {
       arch: 'linux-x86',
       output: 'deployer-x86',
-      //target: 'linux-x86-14.15.3'
-      target: 'linux-x86-18.16.0'
+      target: 'linux-x86-14.15.3'
     },
-    */
     {
       arch: 'win32-x64',
       output: 'deployer.exe',
-      //target: 'windows-x64-14.15.3'
-      target: 'windows-x64-18.16.0'
+      target: 'windows-x64-14.15.3'
     },
-    /*
     {
       arch: 'win32-x86',
       output: 'deployer32.exe',
-      //target: 'windows-x86-14.15.3'
-      target: 'windows-x86-18.16.0'
+      target: 'windows-x86-14.15.3'
     },
-    */
   ];
+
+  let jsbundle = fs.readFileSync(path.join(distPath, 'deployer.js'), "utf-8");
+  jsbundle = jsbundle.replace(/node:crypto/g, "crypto"); // ugly fix to replace `node:crypto` imports by `crypto` 
+  fs.writeFileSync(path.join(distPath, 'deployer.compat.js'), jsbundle);
 
   console.log("Building executables to '" + binPath + "'");
   Promise.all(cliBuildList.map((cliBuild) => {
     console.log("Building target: " + cliBuild.target);
     return compile({
-      input: path.join(distPath, 'deployer.js'),
+      input: path.join(distPath, 'deployer.compat.js'),
       output: path.join(binPath, cliBuild.output),
-      build: true,
       target: cliBuild.target,
       temp: buildPath,
       silent: true,
       resources: [ path.join(distPath, 'deployer.js') ],
-      //plugins: [ nexeUpxPlugin(true) ]
+      plugins: [ nexeUpxPlugin(true) ]
     });
   })).then(function() {
     console.log("All builds finished.");
