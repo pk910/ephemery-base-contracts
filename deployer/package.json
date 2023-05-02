@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "description": "Contract Deployer",
   "scripts": {
-    "build": "tsc",
-    "bundle": "webpack --mode development",
+    "compile": "tsc",
+    "dev-build": "webpack --mode development",
+    "build": "webpack --mode production",
     "release": "webpack --mode production && node ./build-bin.js"
   },
   "author": "pk910 (https://pk910.de)",
