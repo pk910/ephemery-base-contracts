@@ -141,9 +141,9 @@ export class StandaloneProject extends BaseProject {
       let fnargs = fnmatch[2].split(",");
       switch(fnmatch[1]) {
         case "balance":
-          return await Web3Manager.instance.getBalance.apply(this, fnargs);
+          return await Web3Manager.instance.getBalance.apply(Web3Manager.instance, fnargs);
         case "iscontract":
-          return await Web3Manager.instance.isContract.apply(this, fnargs);
+          return await Web3Manager.instance.isContract.apply(Web3Manager.instance, fnargs);
         default:
           Logger.error("StandaloneProject.resolveStepConditionTerm", "invalid condition term fn: " + fnmatch[1]);
           return null;
