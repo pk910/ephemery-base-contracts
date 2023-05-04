@@ -110,7 +110,7 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
             nonce: stepIdx,
             stepYaml: stepYaml as IManagedCallStepYaml,
             managerContract: managerContract,
-            signature: null,
+            signature: this.getStepSignature(stepIdx),
           });
           break;
         case "create":
@@ -121,7 +121,7 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
             nonce: stepIdx,
             stepYaml: stepYaml as IManagedCreateStepYaml,
             managerContract: managerContract,
-            signature: null,
+            signature: this.getStepSignature(stepIdx),
           });
           break;
         case "create2":
@@ -132,7 +132,7 @@ export class ManagedProject extends BaseProject<IManagedProjectYaml> {
             nonce: stepIdx,
             stepYaml: stepYaml as IManagedCreate2StepYaml,
             managerContract: managerContract,
-            signature: null,
+            signature: this.getStepSignature(stepIdx),
           });
           break;
         default:
