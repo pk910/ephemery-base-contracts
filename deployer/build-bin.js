@@ -42,6 +42,21 @@ const nexeUpxPlugin = require('./utils/nexe-upx-plugin');
   ];
 
   let jsbundle = fs.readFileSync(path.join(distPath, 'deployer.js'), "utf-8");
+  jsbundle = [
+    // prepend a Buffer polyfill to get rid of this damn `new Buffer()` DeprecationWarning (coming from somewhere deep within the node_modules...)
+    '(function() {',
+      'var Buffer = global.Buffer;',
+      'global.Buffer = function() {',
+        'if(typeof arguments[0] == "string")',
+          'return Buffer.from(arguments[0]);',
+        'else if(typeof arguments[0] == "number")',
+          'return Buffer.alloc(arguments[0]);',
+        'return new Buffer(arguments[0]);',
+      '};',
+      'Object.setPrototypeOf(global.Buffer, Buffer);',
+    '})();',
+    jsbundle,
+  ].join("");
   jsbundle = jsbundle.replace(/node:crypto/g, "crypto"); // ugly fix to replace `node:crypto` imports by `crypto` 
   fs.writeFileSync(path.join(distPath, 'deployer.compat.js'), jsbundle);
 
