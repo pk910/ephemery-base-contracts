@@ -1,0 +1,22 @@
+mode: "standalone"
+
+exports:
+  "4788Contract": "contract:0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02"
+
+steps:
+  - # fund deployer
+    action: "call"
+    if:
+      - ["balance(0x0B799C86a49DEeb90402691F1041aa3AF2d3C875)", "<", 500000000000000000]
+      - ["iscontract(0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02)", "==", false]
+    address: "0x0B799C86a49DEeb90402691F1041aa3AF2d3C875"
+    amount: 1000000000000000000
+    await: true
+  - # create 4788 contract (0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02)
+    action: "publish"
+    if:
+      - ["iscontract(0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02)", "==", false]
+    transaction: "0xf8838085e8d4a510008303d0908080b86a60618060095f395ff33373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff0155001b820539851b9b6eb1f0"
+    await: true
+
+code-verify:
